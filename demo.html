@@ -1,0 +1,3138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AJ FHIR Platform — Live Flow Simulation</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   Option 4: Shell #F4F6F8 · Navy headers #1B4F8A · Teal FHIR #0D7A6E
+   Teal:  #0D7A6E accent · #1A9E90 light · #0A6058 dark
+   Ice:   #E0EFFE pale · #B8D4E8 border
+   Text:  #C8E4F4 primary · #7ABCD8 muted · #4A7898 dim
+   Code:  #A8D8F0 string · #F0C080 key · #90D8B8 value · #E07878 error
+   ═══════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ══ Option 4 — Pure white + navy/teal accent headers ══════════════
+     Shell: neutral grey #F4F6F8 — distinct from commercial site ice-blue.
+     Panel headers: #1B4F8A (auth/flow) and #0D7A6E (FHIR) — brand colours.
+     All text verified >= 4.5:1 WCAG AA.
+     ══════════════════════════════════════════════════════════════════ */
+  --bg:          #F4F6F8;   /* neutral grey shell — not blue-white */
+  --surface:     #F4F6F8;   /* topbar + bottombar */
+  --surface2:    #1B4F8A;   /* auth panel headers — brand navy */
+  --surface3:    #F6F8FA;   /* code panel bg — very light grey */
+  --panel-body:  #FFFFFF;
+  --navy:        #1B4F8A;
+  --navy-dark:   #133A6A;
+  --navy-glow:   rgba(27,79,138,.2);
+  --teal:        #0D7A6E;
+  --teal-light:  #0A7A6E;
+  --teal-glow:   rgba(13,122,110,.2);
+  --border:      #DDE3EA;   /* panel edges on grey shell */
+  --border-mid:  #C8D2DC;   /* stronger separator */
+  --text:        #0D1F33;   /* 16.7:1 on white ✓ */
+  --text-muted:  #2C5070;   /* 8.4:1 on white ✓ */
+  --text-dim:    #3D6A8A;   /* 5.3:1 on #F4F6F8 ✓ (was #4A7898 = 4.4 FAIL) */
+  /* Syntax — GitHub light, verified >= 4.5:1 on #F6F8FA */
+  --key:         #0550AE;   /* 7.1:1 ✓ */
+  --str:         #0A5A50;   /* 7.6:1 ✓ */
+  --val:         #116329;   /* 6.6:1 ✓ */
+  --err:         #B91C1C;   /* 6.2:1 ✓ */
+  --warn:        #854D0E;   /* 7.1:1 ✓ */
+  --font-sans:   -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  --font-mono:   'SFMono-Regular', 'Cascadia Code', Consolas, 'Liberation Mono', monospace;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: #F4F6F8;  /* neutral grey shell */
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+#topbar {
+  height: 42px;
+  background: #F4F6F8;
+  border-bottom: 1px solid #DDE3EA;
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+.tb-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #0D1F33;  /* 16.7:1 on #F4F6F8 ✓ */
+  letter-spacing: -.01em;
+}
+.tb-logo-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #1B4F8A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: white;
+}
+.tb-sep { width: 1px; height: 20px; background: #DDE3EA; }
+.tb-title {
+  font-size: 13px;
+  color: #2C5070;  /* 7.8:1 on #F4F6F8 ✓ */
+  font-weight: 500;
+}
+.tb-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: rgba(13,122,110,.12);
+  color: #0A5A50;  /* 7.3:1 on #F4F6F8 ✓ */
+  border: 1px solid rgba(13,122,110,.3);
+  letter-spacing: .04em;
+}
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: .625rem; }
+.tb-link {
+  font-size: 12px;
+  color: #2C5070;  /* 7.8:1 on #F4F6F8 ✓ */
+  text-decoration: none;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #C8D2DC;
+  transition: border-color .15s, color .15s;
+}
+.tb-link:hover { border-color: #1B4F8A; color: #0D1F33; }
+
+/* ── Main layout ─────────────────────────────────────────────────── */
+#shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+#main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;  /* thin dark gap between panels — visible separation */
+  overflow: hidden;
+  min-height: 0;
+  background: #DDE3EA;  /* neutral border between panels */
+}
+
+/* ── Panel base ──────────────────────────────────────────────────── */
+.panel {
+  border: 1px solid #DDE3EA;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.panel-header {
+  height: 34px;
+  background: #1B4F8A;  /* brand navy header */
+  border-bottom: 1px solid #133A6A;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: .625rem;
+  flex-shrink: 0;
+}
+.panel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7AAAD0;
+}
+.panel-dot.teal  { background: #5AC4B8; }
+.panel-dot.navy  { background: #7AAAD0; }
+.panel-dot.warn  { background: #F0C060; }
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #FFFFFF;  /* 8.3:1 on #1B4F8A ✓ */
+}
+.panel-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #133A6A;
+  color: #E0F0FF;  /* 7.1:1 on #133A6A ✓ */
+  border: 1px solid #0D2A50;
+}
+.panel-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #FFFFFF;  /* light content area contrasts with dark chrome */
+}
+/* Teal header variant — Audit + Token panels (FHIR data layer) */
+.panel-header.teal-hdr {
+  background: #0D7A6E;
+  border-bottom: 1px solid #0A6058;
+}
+/* When badge sits inside teal header */
+.panel-header.teal-hdr .panel-badge {
+  background: #0A5A50;
+  border-color: #084840;
+  color: #D8F2EE;  /* 6.8:1 on #0A5A50 ✓ */
+}
+
+/* ── Flow diagram panel (top-left, spans 2 rows) ─────────────────── */
+#panel-flow {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  border-right: 1px solid #C8D2DC;
+}
+
+/* ── HTTP packet panel (top-right) ───────────────────────────────── */
+#panel-http {
+  grid-column: 2;
+  grid-row: 1;
+  border-bottom: 1px solid #C8D2DC;
+}
+
+/* ── Token + audit panels (bottom-right, side by side) ──────────── */
+#panel-token {
+  grid-column: 2;
+  grid-row: 2;
+  border-top: 0;
+}
+
+/* ── Bottom bar ──────────────────────────────────────────────────── */
+#bottombar {
+  height: 52px;
+  background: #F4F6F8;
+  border-top: 1px solid #DDE3EA;
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+/* Step dots */
+#step-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  border: 1px solid #C8D2DC;
+  cursor: pointer;
+  transition: background .15s, transform .1s, border-color .15s;
+  flex-shrink: 0;
+}
+.step-dot:hover { transform: scale(1.3); border-color: #1B4F8A; }
+.step-dot.active {
+  background: #1B4F8A;
+  border-color: #1B4F8A;
+  transform: scale(1.2);
+  box-shadow: 0 0 6px rgba(27,79,138,.3);
+}
+.step-dot.done {
+  background: #0D7A6E;
+  border-color: #0D7A6E;
+}
+/* Progress line between dots */
+#step-dots::before {
+  content: '';
+  position: absolute;
+  left: 1.25rem;
+  height: 1px;
+  background: #DDE3EA;
+  z-index: 0;
+}
+
+/* Step label */
+#step-label {
+  font-size: 12px;
+  color: #2C5070;  /* 7.8:1 on #F4F6F8 ✓ */
+  font-weight: 500;
+  min-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#step-counter {
+  font-size: 11px;
+  color: #2C5070;  /* 7.8:1 on #F4F6F8 ✓ */
+  font-family: var(--font-mono);
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Controls */
+#controls { display: flex; align-items: center; gap: .5rem; }
+.ctrl-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid #C8D2DC;
+  background: #E8EEF4;
+  color: #2C5070;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.ctrl-btn:hover { background: #D8E4F0; color: #0D1F33; border-color: #1B4F8A; }
+.ctrl-btn.primary {
+  background: #1B4F8A;
+  border-color: #1B4F8A;
+  color: white;
+  width: 34px; height: 34px;
+}
+.ctrl-btn.primary:hover { background: #133A6A; }
+.speed-select {
+  background: #E8EEF4;
+  border: 1px solid #C8D2DC;
+  color: #2C5070;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+.speed-select:hover { border-color: #1B4F8A; color: #0D1F33; }
+
+/* ── Flow diagram SVG ────────────────────────────────────────────── */
+#flow-svg {
+  width: 100%;
+  height: 100%;
+  background: #F8FAFB;  /* near-white neutral bg for diagram */
+}
+
+/* Actor nodes */
+.actor-node rect {
+  transition: fill .25s, stroke .25s, filter .25s;
+}
+.actor-node text {
+  transition: fill .25s;
+  font-family: var(--font-sans);
+  pointer-events: none;
+}
+.actor-node.idle rect {
+  fill: #FFFFFF;
+  stroke: #DDE3EA;
+  stroke-width: 1.5;
+}
+.actor-node.idle .node-title { fill: #1E3D58; }  /* 11.3:1 on white ✓ */
+.actor-node.idle .node-sub   { fill: #3D6A8A; }  /* 5.8:1 on white ✓ */
+
+.actor-node.active rect {
+  fill: #1B4F8A;
+  stroke: #1B4F8A;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 10px rgba(27,79,138,.25));
+}
+.actor-node.active .node-title { fill: #FFFFFF; }
+.actor-node.active .node-sub   { fill: #B8D8F8; }
+
+.actor-node.teal rect, .actor-node.consent rect, .actor-node.referral rect {
+  fill: #0D7A6E;
+  stroke: #0D7A6E;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 10px rgba(13,122,110,.25));
+}
+.actor-node.teal .node-title, .actor-node.consent .node-title, .actor-node.referral .node-title { fill: #FFFFFF; }
+.actor-node.teal .node-sub,   .actor-node.consent .node-sub,   .actor-node.referral .node-sub   { fill: #B0E8E0; }
+/* Lab System active — amber */
+.actor-node.lab rect {
+  fill: #854D0E;  stroke: #854D0E;  stroke-width: 2;
+  filter: drop-shadow(0 0 10px rgba(133,77,14,.25));
+}
+.actor-node.lab .node-title { fill: #FFFFFF; }
+.actor-node.lab .node-sub   { fill: #F8D8A0; }
+/* PACS/DICOM active — purple */
+.actor-node.pacs rect {
+  fill: #534AB7;  stroke: #534AB7;  stroke-width: 2;
+  filter: drop-shadow(0 0 10px rgba(83,74,183,.25));
+}
+.actor-node.pacs .node-title { fill: #FFFFFF; }
+.actor-node.pacs .node-sub   { fill: #C8C0F0; }
+
+.actor-node.done rect {
+  fill: #E8F0FA;
+  stroke: #B0C4DC;
+  stroke-width: 1.5;
+}
+.actor-node.done .node-title { fill: #1B4F8A; }  /* 7.2:1 on #E8F0FA ✓ */
+.actor-node.done .node-sub   { fill: #2C5070; }  /* 7.3:1 on #E8F0FA ✓ */
+
+/* Connection lines */
+.conn-line {
+  fill: none;
+  stroke: #C8D2DC;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+  transition: stroke .25s, stroke-dasharray .25s;
+}
+/* path elements also need fill:none — already in conn-line but explicit for paths */
+path.conn-line { fill: none; }
+.conn-line.active {
+  stroke: #1B4F8A;
+  stroke-dasharray: none;
+  stroke-width: 2;
+  fill: none;
+}
+.conn-line.teal { stroke: #0D7A6E; stroke-dasharray: none; stroke-width: 2; fill: none; }
+
+/* Packet traveller — animated dot that moves along connections */
+.packet {
+  r: 5;
+  fill: #0A7A6E;
+  filter: drop-shadow(0 0 4px rgba(13,122,110,.7));
+  opacity: 0;
+}
+
+/* ── Code / log panels ───────────────────────────────────────────── */
+.code-scroll {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  padding: .875rem 1rem;
+  overflow-y: auto;
+  height: 100%;
+  color: #0D1F33;  /* 16.7:1 on #F6F8FA ✓ */
+  background: #F6F8FA;  /* neutral light code bg */
+}
+.code-scroll::-webkit-scrollbar { width: 4px; }
+.code-scroll::-webkit-scrollbar-track { background: transparent; }
+.code-scroll::-webkit-scrollbar-thumb { background: #C8D2DC; border-radius: 2px; }
+
+/* HTTP syntax — GitHub light inspired */
+.http-method  { color: #0550AE; font-weight: 700; }
+.http-url     { color: #0D7A6E; }
+.http-header  { color: #2C5070; }
+.http-key     { color: #0550AE; }
+.http-str     { color: #0A5A50; }
+.http-num     { color: #116329; }
+.http-bool    { color: #8250DF; }
+.http-status-ok  { color: #116329; font-weight: 700; }
+.http-status-err { color: #CF222E; font-weight: 700; }
+.http-comment { color: #486880; font-style: italic; } /* 5.5:1 on #F6F8FA ✓ */
+.http-arrow   { color: #486880; } /* 5.5:1 on #F6F8FA ✓ */
+.http-ann     { color: #0D7A6E; font-weight: 600; }
+.http-muted   { color: #3D6A8A; }
+
+/* Token panel */
+.token-field {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(27,79,138,.12);
+}
+.token-key { color: var(--key); font-weight: 600; }
+.token-val { color: var(--str); word-break: break-all; }
+.token-ann {
+  margin-left: auto;
+  font-size: 11px;
+  color: #0A5A50;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(13,122,110,.1);
+  border: 1px solid rgba(13,122,110,.25);
+}
+.token-ann.warn {
+  color: #9A6700;
+  background: rgba(154,103,0,.08);
+  border-color: rgba(154,103,0,.25);
+}
+.token-ann.important {
+  color: #C84020;
+  background: rgba(200,64,32,.08);
+  border-color: rgba(200,64,32,.25);
+}
+
+/* Idle / empty state */
+.idle-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  color: #3D6A8A;  /* 5.8:1 on white ✓ */
+  font-size: 12px;
+  pointer-events: none;
+}
+.idle-icon { font-size: 28px; opacity: .3; }
+
+/* Scan line removed — looked wrong on light theme */
+#scanline { display: none; }
+
+/* ── Tooltip ─────────────────────────────────────────────────────── */
+#tooltip {
+  position: fixed;
+  background: #FFFFFF;
+  border: 1px solid #DDE3EA;
+  border-radius: 8px;
+  padding: .5rem .875rem;
+  font-size: 12px;
+  color: #2C5070;
+  pointer-events: none;
+  z-index: 200;
+  max-width: 240px;
+  line-height: 1.5;
+  display: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+
+/* ── Responsive: token + audit split ─────────────────────────────── */
+#bottom-right {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 0;
+  background: #DDE3EA;  /* border between panels */
+}
+#panel-token  { border-right: 1px solid #C8D2DC; }
+#panel-audit  { }
+
+/* ── Step info overlay (shows on centrepiece steps) ──────────────── */
+#step-info {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #FFFFFF;
+  border: 1px solid #DDE3EA;
+  border-radius: 8px;
+  padding: .5rem .875rem;
+  font-size: 11px;
+  color: #2C5070;
+  max-width: 200px;
+  line-height: 1.5;
+  z-index: 10;
+  display: none;
+  box-shadow: 0 2px 10px rgba(0,0,0,.1);
+}
+</style>
+</head>
+<body>
+<div id="scanline"></div>
+<div id="tooltip"></div>
+<div id="step-info"></div>
+
+<div id="shell">
+
+  <!-- ── Top bar ─────────────────────────────────────────────────── -->
+  <div id="topbar">
+    <div class="tb-logo">
+      <div class="tb-logo-mark">AJ</div>
+      <span>FHIR Platform</span>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-title">Live SMART on FHIR Flow Simulation</div>
+    <div class="tb-badge">SMART App Launch v2.2</div>
+    <div class="tb-right">
+      <a class="tb-link" href="https://ajfhir.org/docs/architecture/data-flow" target="_blank">Data flow docs ↗</a>
+      <a class="tb-link" href="https://ajfhir.com" target="_blank">ajfhir.com ↗</a>
+    </div>
+  </div>
+
+  <!-- ── Main 4-panel grid ───────────────────────────────────────── -->
+  <div id="main">
+
+    <!-- Flow diagram (left, full height) -->
+    <div class="panel" id="panel-flow">
+      <div class="panel-header">
+        <div class="panel-dot navy"></div>
+        <div class="panel-title">Platform Architecture — Live</div>
+        <div class="panel-badge" id="flow-step-label">Waiting to start</div>
+      </div>
+      <div class="panel-body">
+        <svg id="flow-svg" viewBox="0 0 680 780" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arr-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10Z" fill="#1B4F8A"/></marker>
+            <marker id="arr-navy" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10Z" fill="#1B4F8A"/></marker>
+            <marker id="arr-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10Z" fill="#0D7A6E"/></marker>
+            <marker id="arr-dim"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10Z" fill="#C8DFF0"/></marker>
+            <filter id="node-glow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <!-- Clip paths -->
+            <clipPath id="clip-epic">    <rect x="15"  y="30"  width="150" height="66" rx="10"/></clipPath>
+            <clipPath id="clip-browser"> <rect x="235" y="30"  width="160" height="66" rx="10"/></clipPath>
+            <clipPath id="clip-auth">    <rect x="235" y="156" width="160" height="96" rx="10"/></clipPath>
+            <clipPath id="clip-idp">     <rect x="495" y="156" width="160" height="96" rx="10"/></clipPath>
+            <clipPath id="clip-hapi">    <rect x="235" y="312" width="160" height="96" rx="10"/></clipPath>
+            <clipPath id="clip-consent"> <rect x="495" y="312" width="160" height="96" rx="10"/></clipPath>
+            <clipPath id="clip-lab">     <rect x="15"  y="468" width="150" height="80" rx="10"/></clipPath>
+            <clipPath id="clip-pacs">    <rect x="235" y="468" width="160" height="80" rx="10"/></clipPath>
+            <clipPath id="clip-referral"><rect x="495" y="468" width="160" height="80" rx="10"/></clipPath>
+            <clipPath id="clip-audit">   <rect x="235" y="608" width="160" height="80" rx="10"/></clipPath>
+          </defs>
+
+          <!-- ══════════════════════════════════════════════════════════
+               LAYOUT: Col1 x=15 w=150  Col2 x=235 w=160  Col3 x=495 w=160
+               Gaps: 70px col1→col2  ·  100px col2→col3
+               Row gaps: 60px each. All text verified ≥21px from node bottom.
+               ══════════════════════════════════════════════════════════ -->
+
+          <!-- CONNECTIONS (drawn first, below nodes) -->
+
+          <line id="conn-epic-browser"    x1="165" y1="63" x2="233" y2="63" class="conn-line" marker-end="url(#arr-dim)"/>
+          <line id="conn-browser-auth"    x1="315" y1="97" x2="315" y2="154" class="conn-line" marker-end="url(#arr-dim)"/>
+          <line id="conn-auth-hapi"       x1="315" y1="253" x2="315" y2="310" class="conn-line" marker-end="url(#arr-dim)"/>
+          <line id="conn-auth-idp"        x1="396" y1="204" x2="493" y2="204" class="conn-line" marker-end="url(#arr-dim)"/>
+          <line id="conn-hapi-consent"    x1="396" y1="360" x2="493" y2="360" class="conn-line" marker-end="url(#arr-dim)"/>
+          <line id="conn-smart-hapi"      x1="360" y1="97" x2="360" y2="310" class="conn-line" marker-end="url(#arr-dim)"/>
+          <line id="conn-hapi-pacs"       x1="315" y1="409" x2="315" y2="466" class="conn-line" marker-end="url(#arr-dim)"/>
+          <line id="conn-consent-referral" x1="575" y1="409" x2="575" y2="466" class="conn-line" marker-end="url(#arr-dim)"/>
+          <line id="conn-pacs-audit"      x1="315" y1="549" x2="315" y2="606" class="conn-line" marker-end="url(#arr-dim)"/>
+
+          <path id="conn-browser-smart"   d="M235,63 C200,63 200,333 235,333" class="conn-line" fill="none" marker-end="url(#arr-dim)"/>
+          <path id="conn-smart-auth"      d="M235,378 C195,378 195,240 235,240" class="conn-line" fill="none" marker-end="url(#arr-dim)"/>
+          <path id="conn-hapi-lab"        d="M255,409 C255,450 90,450 90,466" class="conn-line" fill="none" marker-end="url(#arr-dim)"/>
+          <path id="conn-hapi-referral"   d="M395,378 C448,378 575,432 575,466" class="conn-line" fill="none" marker-end="url(#arr-dim)"/>
+          <path id="conn-hapi-audit"      d="M235,360 C198,360 198,630 233,638" class="conn-line" fill="none" marker-end="url(#arr-dim)"/>
+          <path id="conn-lab-audit"       d="M90,549 C90,648 233,648 235,648" class="conn-line" fill="none" marker-end="url(#arr-dim)"/>
+          <path id="conn-referral-audit"  d="M575,549 C575,648 397,648 395,648" class="conn-line" fill="none" marker-end="url(#arr-dim)"/>
+
+          <!-- NODES -->
+
+          <!-- Epic EHR  x=15 y=30 w=150 h=66 cx=90 -->
+          <g class="actor-node idle" id="node-epic"
+             data-tip="Epic EHR initiates SMART App Launch — passes iss= and launch= to SMART Client">
+            <rect x="15" y="30" width="150" height="66" rx="10"/>
+            <g clip-path="url(#clip-epic)">
+              <rect x="22" y="33" width="24" height="14" rx="4" fill="rgba(27,79,138,.12)"/>
+              <text x="34" y="43" text-anchor="middle" font-size="8" font-weight="700" fill="#3D6A8A" font-family="sans-serif">EHR</text>
+              <text x="90" y="56" text-anchor="middle" font-size="14" font-weight="700" class="node-title">Epic EHR</text>
+              <text x="90" y="71" text-anchor="middle" font-size="11.5" class="node-sub">Launch initiator</text>
+            </g>
+          </g>
+
+          <!-- Browser  x=235 y=30 w=160 h=66 cx=315 -->
+          <g class="actor-node idle" id="node-browser"
+             data-tip="Clinician browser — runs SMART Client :8080 and Auth Server portal">
+            <rect x="235" y="30" width="160" height="66" rx="10"/>
+            <g clip-path="url(#clip-browser)">
+              <circle cx="253" cy="53" r="9" fill="none" stroke="#1B4F8A" stroke-width="1" opacity=".3"/>
+              <line x1="244" y1="53" x2="262" y2="53" stroke="#1B4F8A" stroke-width=".8" opacity=".3"/>
+              <ellipse cx="253" cy="53" rx="4" ry="9" fill="none" stroke="#1B4F8A" stroke-width=".8" opacity=".3"/>
+              <text x="315" y="56" text-anchor="middle" font-size="14" font-weight="700" class="node-title">Browser</text>
+              <text x="315" y="71" text-anchor="middle" font-size="11.5" class="node-sub">Clinician · SMART</text>
+            </g>
+          </g>
+
+          <!-- Auth Server  x=235 y=156 w=160 h=96 cx=315 -->
+          <g class="actor-node idle" id="node-auth"
+             data-tip="Auth Server :9000 — Spring Authorization Server 1.3. PKCE, RS256, launch context, IdP federation.">
+            <rect x="235" y="156" width="160" height="96" rx="10"/>
+            <g clip-path="url(#clip-auth)">
+              <rect x="243" y="159" width="14" height="11" rx="2" fill="rgba(27,79,138,.18)"/>
+              <path d="M246 159 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="rgba(27,79,138,.5)" stroke-width="1.3"/>
+              <text x="315" y="182" text-anchor="middle" font-size="14" font-weight="700" class="node-title">Auth Server</text>
+              <text x="315" y="197" text-anchor="middle" font-size="11.5" class="node-sub">Spring AS 1.3</text>
+              <text x="315" y="212" text-anchor="middle" font-size="11.5" class="node-sub">PKCE · RS256 · v2.2</text>
+              <text x="315" y="227" text-anchor="middle" font-size="11.5" class="node-sub">:9000 · 90 tests</text>
+            </g>
+          </g>
+
+          <!-- IdP Federation  x=495 y=156 w=160 h=96 cx=575 -->
+          <g class="actor-node idle" id="node-idp"
+             data-tip="External IdP — Azure AD, Okta, Epic IdP, ADFS. Active when idp Spring profile is set.">
+            <rect x="495" y="156" width="160" height="96" rx="10"/>
+            <g clip-path="url(#clip-idp)">
+              <text x="575" y="182" text-anchor="middle" font-size="14" font-weight="700" class="node-title">IdP Federation</text>
+              <text x="575" y="197" text-anchor="middle" font-size="11.5" class="node-sub">Azure AD · Okta</text>
+              <text x="575" y="212" text-anchor="middle" font-size="11.5" class="node-sub">Epic IdP · ADFS</text>
+              <text x="575" y="227" text-anchor="middle" font-size="11.5" class="node-sub">oauth2Login()</text>
+            </g>
+          </g>
+
+          <!-- HAPI FHIR  x=235 y=312 w=160 h=96 cx=315 -->
+          <g class="actor-node idle" id="node-hapi"
+             data-tip="HAPI FHIR JPA :8080 — SmartDiscoveryProxyFilter · SmartScopeInterceptor · ConsentEnforcementInterceptor">
+            <rect x="235" y="312" width="160" height="96" rx="10"/>
+            <g clip-path="url(#clip-hapi)">
+              <ellipse cx="252" cy="328" rx="8" ry="3.5" fill="none" stroke="rgba(13,122,110,.4)" stroke-width="1.2"/>
+              <line x1="244" y1="328" x2="244" y2="338" stroke="rgba(13,122,110,.4)" stroke-width="1.2"/>
+              <line x1="260" y1="328" x2="260" y2="338" stroke="rgba(13,122,110,.4)" stroke-width="1.2"/>
+              <ellipse cx="252" cy="338" rx="8" ry="3.5" fill="none" stroke="rgba(13,122,110,.4)" stroke-width="1.2"/>
+              <text x="315" y="338" text-anchor="middle" font-size="14" font-weight="700" class="node-title">HAPI FHIR</text>
+              <text x="315" y="353" text-anchor="middle" font-size="11.5" class="node-sub">:8080 · R4 · JPA</text>
+              <text x="315" y="368" text-anchor="middle" font-size="11.5" class="node-sub">Discovery proxy</text>
+              <text x="315" y="383" text-anchor="middle" font-size="11.5" class="node-sub">Scope interceptor</text>
+            </g>
+          </g>
+
+          <!-- Consent Manager  x=495 y=312 w=160 h=96 cx=575 -->
+          <g class="actor-node idle" id="node-consent"
+             data-tip="Consent Manager v1.1.0 — ConsentEnforcementInterceptor before every FHIR access. GDPR, DISHA, HIPAA.">
+            <rect x="495" y="312" width="160" height="96" rx="10"/>
+            <g clip-path="url(#clip-consent)">
+              <rect x="503" y="314" width="14" height="11" rx="2" fill="rgba(13,122,110,.15)"/>
+              <path d="M506 314 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="rgba(13,122,110,.5)" stroke-width="1.2"/>
+              <text x="575" y="338" text-anchor="middle" font-size="14" font-weight="700" class="node-title">Consent Manager</text>
+              <text x="575" y="353" text-anchor="middle" font-size="11.5" class="node-sub">FHIR Consent · GDPR</text>
+              <text x="575" y="368" text-anchor="middle" font-size="11.5" class="node-sub">Consent Enforcement</text>
+              <text x="575" y="383" text-anchor="middle" font-size="11.5" class="node-sub">Interceptor v1.1.0</text>
+            </g>
+          </g>
+
+          <!-- Lab System  x=15 y=468 w=150 h=80 cx=90 -->
+          <g class="actor-node idle" id="node-lab"
+             data-tip="Lab System — posts Observation results and DiagnosticReport to HAPI via SMART API.">
+            <rect x="15" y="468" width="150" height="80" rx="10"/>
+            <g clip-path="url(#clip-lab)">
+              <rect x="22" y="471" width="24" height="14" rx="4" fill="rgba(133,77,14,.12)"/>
+              <text x="34" y="481" text-anchor="middle" font-size="8" font-weight="700" fill="#854D0E" font-family="sans-serif">LAB</text>
+              <text x="90" y="494" text-anchor="middle" font-size="14" font-weight="700" class="node-title">Lab System</text>
+              <text x="90" y="509" text-anchor="middle" font-size="11.5" class="node-sub">SR → Observation</text>
+              <text x="90" y="524" text-anchor="middle" font-size="11.5" class="node-sub">DiagnosticReport</text>
+            </g>
+          </g>
+
+          <!-- PACS/DICOM  x=235 y=468 w=160 h=80 cx=315 -->
+          <g class="actor-node idle" id="node-pacs"
+             data-tip="PACS — ImagingStudy FHIR resources + DICOMweb WADO-RS. FHIR wraps DICOM metadata.">
+            <rect x="235" y="468" width="160" height="80" rx="10"/>
+            <g clip-path="url(#clip-pacs)">
+              <rect x="243" y="471" width="24" height="14" rx="4" fill="rgba(83,74,183,.12)"/>
+              <text x="255" y="481" text-anchor="middle" font-size="8" font-weight="700" fill="#534AB7" font-family="sans-serif">PACS</text>
+              <text x="315" y="494" text-anchor="middle" font-size="14" font-weight="700" class="node-title">PACS / DICOM</text>
+              <text x="315" y="509" text-anchor="middle" font-size="11.5" class="node-sub">ImagingStudy WADO-RS</text>
+              <text x="315" y="524" text-anchor="middle" font-size="11.5" class="node-sub">DICOMweb endpoint</text>
+            </g>
+          </g>
+
+          <!-- Referral Module  x=495 y=468 w=160 h=80 cx=575 -->
+          <g class="actor-node idle" id="node-referral"
+             data-tip="Referral Module v1.2.0 — FHIR ServiceRequest + Task. Cross-facility with consent check.">
+            <rect x="495" y="468" width="160" height="80" rx="10"/>
+            <g clip-path="url(#clip-referral)">
+              <rect x="503" y="471" width="24" height="14" rx="4" fill="rgba(13,122,110,.12)"/>
+              <text x="515" y="481" text-anchor="middle" font-size="8" font-weight="700" fill="#0D7A6E" font-family="sans-serif">REF</text>
+              <text x="575" y="494" text-anchor="middle" font-size="14" font-weight="700" class="node-title">Referral Module</text>
+              <text x="575" y="509" text-anchor="middle" font-size="11.5" class="node-sub">SR + Task · FHIR</text>
+              <text x="575" y="524" text-anchor="middle" font-size="11.5" class="node-sub">Cross-facility ref</text>
+            </g>
+          </g>
+
+          <!-- Audit Store  x=235 y=608 w=160 h=80 cx=315 -->
+          <g class="actor-node idle" id="node-audit"
+             data-tip="Audit Store — IHE ATNA AuditEvent from all components. Auth, Consent, Lab, PACS, Referral. PostgreSQL.">
+            <rect x="235" y="608" width="160" height="80" rx="10"/>
+            <g clip-path="url(#clip-audit)">
+              <ellipse cx="252" cy="623" rx="8" ry="3.5" fill="none" stroke="rgba(13,122,110,.4)" stroke-width="1.2"/>
+              <line x1="244" y1="623" x2="244" y2="633" stroke="rgba(13,122,110,.4)" stroke-width="1.2"/>
+              <line x1="260" y1="623" x2="260" y2="633" stroke="rgba(13,122,110,.4)" stroke-width="1.2"/>
+              <ellipse cx="252" cy="633" rx="8" ry="3.5" fill="none" stroke="rgba(13,122,110,.4)" stroke-width="1.2"/>
+              <text x="315" y="634" text-anchor="middle" font-size="14" font-weight="700" class="node-title">Audit Store</text>
+              <text x="315" y="649" text-anchor="middle" font-size="11.5" class="node-sub">AuditEvent · ATNA</text>
+              <text x="315" y="664" text-anchor="middle" font-size="11.5" class="node-sub">PostgreSQL · async</text>
+            </g>
+          </g>
+
+          <!-- Step labels on connections (all verified clear of node boundaries) -->
+          <text x="193" y="59"  font-size="10" fill="#3D6A8A" font-family="monospace">5</text>
+          <text x="323" y="128" font-size="10" fill="#3D6A8A" font-family="monospace">1,8</text>
+          <text x="323" y="284" font-size="10" fill="#3D6A8A" font-family="monospace">2,16</text>
+          <text x="178" y="270" font-size="10" fill="#3D6A8A" font-family="monospace">6,14</text>
+          <text x="178" y="310" font-size="10" fill="#3D6A8A" font-family="monospace">15</text>
+          <text x="406" y="196" font-size="10" fill="#3D6A8A" font-family="monospace">9</text>
+          <text x="400" y="196" font-size="10" fill="#3D6A8A" font-family="monospace">3,10</text>
+          <text x="400" y="208" font-size="10" fill="#3D6A8A" font-family="monospace">16,17</text>
+          <text x="406" y="352" font-size="10" fill="#3D6A8A" font-family="monospace">19,22</text>
+          <text x="178" y="430" font-size="10" fill="#3D6A8A" font-family="monospace">24</text>
+          <text x="323" y="440" font-size="10" fill="#3D6A8A" font-family="monospace">27</text>
+          <text x="406" y="428" font-size="10" fill="#3D6A8A" font-family="monospace">30</text>
+          <text x="178" y="510" font-size="10" fill="#3D6A8A" font-family="monospace">18,34</text>
+          <text x="323" y="580" font-size="10" fill="#3D6A8A" font-family="monospace">34</text>
+
+          <!-- Legend -->
+          <g transform="translate(15,705)">
+            <text x="0" y="0" font-size="11" fill="#1E3D58" font-weight="700" font-family="sans-serif">Legend</text>
+            <rect x="0" y="9" width="14" height="9" rx="2" fill="#1B4F8A"/>
+            <text x="18" y="18" font-size="10.5" fill="#3D6A8A" font-family="sans-serif">Auth / SMART</text>
+            <rect x="120" y="9" width="14" height="9" rx="2" fill="#0D7A6E"/>
+            <text x="138" y="18" font-size="10.5" fill="#3D6A8A" font-family="sans-serif">FHIR / Consent</text>
+            <rect x="265" y="9" width="14" height="9" rx="2" fill="#854D0E"/>
+            <text x="283" y="18" font-size="10.5" fill="#3D6A8A" font-family="sans-serif">Lab / Audit</text>
+            <rect x="375" y="9" width="14" height="9" rx="2" fill="#534AB7"/>
+            <text x="393" y="18" font-size="10.5" fill="#3D6A8A" font-family="sans-serif">Imaging</text>
+            <rect x="0" y="27" width="14" height="9" rx="2" fill="#FFFFFF" stroke="#C8DFF0" stroke-width="1.5"/>
+            <text x="18" y="36" font-size="10.5" fill="#3D6A8A" font-family="sans-serif">Idle</text>
+            <circle cx="128" cy="31" r="5" fill="#0A7A6E"/>
+            <text x="138" y="36" font-size="10.5" fill="#3D6A8A" font-family="sans-serif">Packet in flight</text>
+          </g>
+
+          <circle id="packet-dot" class="packet" r="5" cx="0" cy="0" opacity="0"/>
+
+        </svg>/svg>/svg>
+      </div>
+    </div>
+
+    <!-- Top-right: HTTP packets -->
+    <div class="panel" id="panel-http">
+      <div class="panel-header">
+        <div class="panel-dot navy"></div>
+        <div class="panel-title">HTTP · Request / Response</div>
+        <div class="panel-badge" id="http-badge">—</div>
+      </div>
+      <div class="panel-body">
+        <div class="code-scroll" id="http-content">
+          <div class="idle-state">
+            <div class="idle-icon">⇄</div>
+            <div>HTTP packets will appear here</div>
+            <div style="color:#3D6A8A;font-size:11px;">Press ▶ to start the simulation</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom-right: token + audit side by side -->
+    <div id="bottom-right">
+
+      <!-- Token inspector -->
+      <div class="panel" id="panel-token">
+        <div class="panel-header teal-hdr">
+          <div class="panel-dot teal"></div>
+          <div class="panel-title">Token Inspector</div>
+          <div class="panel-badge" id="token-badge">—</div>
+        </div>
+        <div class="panel-body">
+          <div class="code-scroll" id="token-content">
+            <div class="idle-state">
+              <div class="idle-icon">🔑</div>
+              <div>Token response will appear here</div>
+              <div style="color:#3D6A8A;font-size:11px;">Steps 13–15</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit log -->
+      <div class="panel" id="panel-audit">
+        <div class="panel-header teal-hdr">
+          <div class="panel-dot warn"></div>
+          <div class="panel-title">Audit Log · FHIR AuditEvent</div>
+          <div class="panel-badge" id="audit-badge">0 events</div>
+        </div>
+        <div class="panel-body">
+          <div class="code-scroll" id="audit-content">
+            <div class="idle-state">
+              <div class="idle-icon">📋</div>
+              <div>Audit events will accumulate here</div>
+              <div style="color:#3D6A8A;font-size:11px;">Step 18 · IHE ATNA · HIPAA</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- #main -->
+
+  <!-- ── Bottom bar ──────────────────────────────────────────────── -->
+  <div id="bottombar">
+
+    <!-- Step progress dots — rendered by Task 2 JS -->
+    <div id="step-dots" style="position:relative;display:flex;align-items:center;gap:4px;flex:1;"></div>
+
+    <div class="tb-sep"></div>
+
+    <!-- Step label -->
+    <div id="step-label">Select a step or press play</div>
+
+    <div style="flex:1;"></div>
+
+    <!-- Step counter -->
+    <div id="step-counter">0 / 34</div>
+
+    <!-- Controls -->
+    <div id="controls">
+      <select class="speed-select" id="speed-select" title="Playback speed">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="3">3×</option>
+      </select>
+      <button class="ctrl-btn" id="btn-restart" title="Restart (R)">↺</button>
+      <button class="ctrl-btn" id="btn-prev"    title="Previous (←)">◀</button>
+      <button class="ctrl-btn primary" id="btn-play" title="Play/Pause (Space)">▶</button>
+      <button class="ctrl-btn" id="btn-next"    title="Next (→)">▶▶</button>
+    </div>
+  </div>
+
+</div><!-- #shell -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 1 — Shell + static layout
+   Wires up the tooltip on actor nodes.
+   Verifies all DOM elements exist.
+   Controls are wired but do nothing yet (Task 2 adds step logic).
+   ═══════════════════════════════════════════════════════════════════ */
+
+const TOTAL_STEPS = 18;
+
+// ── Tooltip on SVG nodes ──────────────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+
+document.querySelectorAll('.actor-node').forEach(node => {
+  node.style.cursor = 'pointer';
+  node.addEventListener('mouseenter', e => {
+    const tip = node.dataset.tip;
+    if (!tip) return;
+    tooltip.textContent = tip;
+    tooltip.style.display = 'block';
+  });
+  node.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top  = (e.clientY - 8)  + 'px';
+  });
+  node.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+  });
+});
+
+// ── Verify DOM ───────────────────────────────────────────────────
+const DOM = {
+  httpContent:   document.getElementById('http-content'),
+  tokenContent:  document.getElementById('token-content'),
+  auditContent:  document.getElementById('audit-content'),
+  stepDots:      document.getElementById('step-dots'),
+  stepLabel:     document.getElementById('step-label'),
+  stepCounter:   document.getElementById('step-counter'),
+  flowStepLabel: document.getElementById('flow-step-label'),
+  httpBadge:     document.getElementById('http-badge'),
+  tokenBadge:    document.getElementById('token-badge'),
+  auditBadge:    document.getElementById('audit-badge'),
+  btnPlay:       document.getElementById('btn-play'),
+  btnPrev:       document.getElementById('btn-prev'),
+  btnNext:       document.getElementById('btn-next'),
+  btnRestart:    document.getElementById('btn-restart'),
+  speedSelect:   document.getElementById('speed-select'),
+};
+
+// Confirm all elements found
+const missing = Object.entries(DOM).filter(([k,v]) => !v).map(([k]) => k);
+if (missing.length) {
+  console.warn('TASK 1: Missing DOM elements:', missing);
+} else {
+  console.log('TASK 1: All DOM elements verified ✓');
+  console.log('TASK 1: Shell ready. Task 2 will add step data and navigation.');
+}
+
+// ── Keyboard shortcuts (wired but no-op until Task 2 adds handlers) ──
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    DOM.btnPlay.click();
+  }
+  if (e.code === 'ArrowRight') DOM.btnNext.click();
+  if (e.code === 'ArrowLeft')  DOM.btnPrev.click();
+  if (e.code === 'KeyR')       DOM.btnRestart.click();
+});
+
+// ── Control button placeholders ──────────────────────────────────
+[DOM.btnPlay, DOM.btnPrev, DOM.btnNext, DOM.btnRestart].forEach(btn => {
+  btn.addEventListener('click', () => {
+    console.log(`TASK 1: ${btn.id} clicked — handler added in Task 2`);
+  });
+});
+
+// Export DOM for subsequent tasks
+window.DEMO = { DOM, TOTAL_STEPS };
+console.log('TASK 1 complete ✓ — window.DEMO.DOM available for Task 2');
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 2 — STEPS array + navigation engine
+   ───────────────────────────────────────────────────────────────────
+   Adds:
+   • STEPS[0..17] — all 18 steps from the real data-flow doc, each
+     carrying: label, detail, activeNodes[], activeConns[], layer tag,
+     httpPreview (plain text, Task 4 adds typewriter + syntax),
+     tokenState ('none'|'partial'|'full'), auditCount
+   • renderStep(n) — applies node/connection CSS classes, updates all
+     bottom-bar UI, clears/primes panel content for later tasks
+   • Navigation: next(), prev(), goTo(n), restart()
+   • Button handlers replace the Task 1 no-op placeholders
+   • Step dots rendered with group separators by protocol layer
+   ═══════════════════════════════════════════════════════════════════ */
+(function() {
+
+const { DOM } = window.DEMO;
+
+/* ── Layer colour map (used for dot groups + step badge) ─────────── */
+const LAYERS = {
+  portal:   { label:'Portal',       color:'#1B4F8A', bg:'rgba(27,79,138,.12)' },
+  pkce:     { label:'PKCE',         color:'#854D0E', bg:'rgba(133,77,14,.1)'  },
+  auth:     { label:'Auth',         color:'#1B4F8A', bg:'rgba(27,79,138,.12)'},
+  token:    { label:'Token',        color:'#0D7A6E', bg:'rgba(13,122,110,.12)'},
+  fhir:     { label:'FHIR',         color:'#0D7A6E', bg:'rgba(13,122,110,.12)'},
+  consent:  { label:'Consent',      color:'#0A5A50', bg:'rgba(10,90,80,.12)' },
+  lab:      { label:'Lab',          color:'#854D0E', bg:'rgba(133,77,14,.1)' },
+  imaging:  { label:'Imaging',      color:'#534AB7', bg:'rgba(83,74,183,.12)'},
+  referral: { label:'Referral',     color:'#0D7A6E', bg:'rgba(13,122,110,.12)'},
+  audit:    { label:'Audit',        color:'#854D0E', bg:'rgba(133,77,14,.1)' },
+};
+
+/* ── All 18 steps — sourced directly from data-flow.md ──────────── */
+const STEPS = [
+  /* 0 */ {
+    n: 1,
+    layer: 'portal',
+    label: 'Clinician loads the portal',
+    detail: 'Browser → GET /portal on Auth Server :9000. Patient list rendered via Thymeleaf.',
+    activeNodes: ['node-browser', 'node-auth'],
+    activeConns: ['conn-browser-auth'],
+    httpPreview: `GET /portal HTTP/1.1\nHost: auth.demo.ajfhir.com:9000\nAccept: text/html`,
+    httpBadge: 'GET /portal',
+    tokenState: 'none',
+    auditCount: 0,
+  },
+  /* 1 */ {
+    n: 2,
+    layer: 'portal',
+    label: 'Auth Server fetches patient list from HAPI',
+    detail: 'Server-to-server: Auth Server → GET /fhir/Patient. Internal call, no Bearer token yet.',
+    activeNodes: ['node-auth', 'node-hapi'],
+    activeConns: ['conn-auth-hapi'],
+    httpPreview: `GET /fhir/Patient?_count=20&_sort=family HTTP/1.1\nHost: hapi.demo.ajfhir.com:8080\nAccept: application/fhir+json`,
+    httpBadge: 'GET /fhir/Patient',
+    tokenState: 'none',
+    auditCount: 0,
+  },
+  /* 2 */ {
+    n: 3,
+    layer: 'portal',
+    label: 'Clinician selects patient — launch triggered',
+    detail: 'POST /portal/launch — Auth Server performs atomic INSERT into launch_contexts table with 5-minute expiry.',
+    activeNodes: ['node-browser', 'node-auth'],
+    activeConns: ['conn-browser-auth'],
+    httpPreview: `POST /portal/launch HTTP/1.1\nHost: auth.demo.ajfhir.com:9000\nContent-Type: application/x-www-form-urlencoded\n\npatientId=ePatient-8675309&encounterId=eEnc-001`,
+    httpBadge: 'POST /portal/launch',
+    tokenState: 'none',
+    auditCount: 0,
+    highlight: 'SQL: INSERT INTO launch_contexts\n  (token, patient_id, encounter_id, used, expires_at)\n  VALUES (gen_random_uuid(), ?, ?, false, NOW()+5min)',
+  },
+  /* 3 */ {
+    n: 4,
+    layer: 'portal',
+    label: 'One-time launch token created (atomic)',
+    detail: 'Atomic single-use token stored. Race condition impossible — UPDATE WHERE used=false. 5-minute TTL enforced.',
+    activeNodes: ['node-auth'],
+    activeConns: [],
+    httpPreview: `HTTP/1.1 302 Found\nLocation: http://localhost:8080/launch\n  ?iss=https://fhir.demo.ajfhir.com/fhir\n  &launch=a8f3d2c1-4e5b-4a6c-8d9e-1f2a3b4c5d6e\n\n# launch= is a one-time opaque token\n# It proves patient context at token exchange`,
+    httpBadge: '302 → SMART launch',
+    tokenState: 'none',
+    auditCount: 0,
+    highlight: 'launch=a8f3d2c1-4e5b... — single use · 5 min TTL',
+  },
+  /* 4 */ {
+    n: 5,
+    layer: 'pkce',
+    label: 'EHR redirects browser to SMART Client',
+    detail: 'Browser follows redirect to SMART Client /launch with iss= and launch= parameters.',
+    activeNodes: ['node-epic', 'node-browser'],
+    activeConns: ['conn-epic-browser', 'conn-browser-smart'],
+    httpPreview: `GET /launch HTTP/1.1\nHost: smart.demo.ajfhir.com:8080\n\n# Query parameters:\niss    = https://fhir.demo.ajfhir.com/fhir\nlaunch = a8f3d2c1-4e5b-4a6c-8d9e-1f2a3b4c5d6e`,
+    httpBadge: 'GET /launch',
+    tokenState: 'none',
+    auditCount: 0,
+  },
+  /* 5 */ {
+    n: 6,
+    layer: 'pkce',
+    label: 'SMART Client discovers auth endpoints',
+    detail: 'SMART Client → GET /.well-known/smart-configuration to HAPI :8080. SmartDiscoveryProxyFilter intercepts the request at HAPI and proxies upstream to Auth Server :9000. Client sees Auth Server endpoints as if served from the FHIR base URL',
+    activeNodes: ['node-browser', 'node-hapi', 'node-auth'],
+    activeConns: ['conn-browser-smart', 'conn-smart-hapi', 'conn-auth-hapi'],
+    httpPreview: `GET /.well-known/smart-configuration HTTP/1.1\nHost: fhir.demo.ajfhir.com:8080\n\n# SmartDiscoveryProxyFilter intercepts →\n# proxies to Auth Server :9000\n\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{\n  "authorization_endpoint": "https://auth.demo.ajfhir.com/oauth2/authorize",\n  "token_endpoint": "https://auth.demo.ajfhir.com/oauth2/token",\n  "jwks_uri": "https://auth.demo.ajfhir.com/oauth2/jwks",\n  "issuer": "https://auth.demo.ajfhir.com",\n  "code_challenge_methods_supported": ["S256"],\n  "capabilities": ["launch-ehr","launch-standalone",\n    "client-public","context-ehr-patient",\n    "context-ehr-encounter","sso-openid-connect"]\n}`,
+    httpBadge: '/.well-known/smart-configuration',
+    tokenState: 'none',
+    auditCount: 0,
+  },
+  /* 6 */ {
+    n: 7,
+    layer: 'pkce',
+    label: 'PKCE code verifier + challenge generated',
+    detail: 'RFC 7636 S256: 96-byte verifier (768-bit entropy — 3× spec minimum). SHA-256 hash → base64url = challenge.',
+    activeNodes: ['node-browser'],
+    activeConns: [],
+    httpPreview: `# RFC 7636 — PKCE S256 — computed in browser\n# No HTTP request — purely client-side\n\n# Step 1: Generate 96 random bytes (768-bit entropy)\ncodeVerifier = base64url(\n  SecureRandom.nextBytes(96)\n)\n# = "dBjftJeZ4CVP...mfah2t3BLxi"\n\n# Step 2: SHA-256 hash the verifier\ndigest = SHA-256(ASCII(codeVerifier))\n\n# Step 3: base64url encode → challenge\ncodeChallenge = base64url(digest)\n# = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"\n\n# state = base64url(SecureRandom.nextBytes(16))\nstate = "hTFoLkoM8dp6X3NE..."\n\n# SPEC: code_challenge_method=S256 only\n# plain PKCE is rejected by AuthorizationServerConfig`,
+    httpBadge: 'PKCE generated (client-side)',
+    tokenState: 'none',
+    auditCount: 0,
+    isCentrepiece: true,
+    centrepieceLabel: '⚡ PKCE S256',
+  },
+  /* 7 */ {
+    n: 8,
+    layer: 'auth',
+    label: 'Authorization request sent to Auth Server',
+    detail: 'GET /oauth2/authorize with PKCE challenge, launch token, scopes, and state. Auth Server validates all parameters.',
+    activeNodes: ['node-browser', 'node-auth'],
+    activeConns: ['conn-smart-auth'],
+    httpPreview: `GET /oauth2/authorize HTTP/1.1\nHost: auth.demo.ajfhir.com:9000\n\nresponse_type         = code\nclient_id             = akhester-smart-client\nredirect_uri          = http://localhost:8080/callback\nscope                 = launch openid fhirUser\n                        patient/Patient.rs\n                        patient/Condition.rs\n                        patient/Observation.rs\ncode_challenge        = E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\ncode_challenge_method = S256\nlaunch                = a8f3d2c1-4e5b-4a6c-8d9e-1f2a3b4c5d6e\nstate                 = hTFoLkoM8dp6X3NE\naud                   = https://fhir.demo.ajfhir.com/fhir`,
+    httpBadge: 'GET /oauth2/authorize',
+    tokenState: 'none',
+    auditCount: 0,
+  },
+  /* 8 */ {
+    n: 9,
+    layer: 'auth',
+    label: 'Auth Server redirects to login (or IdP)',
+    detail: 'loginEntryPointUrl() checks for "idp" Spring profile. Local → /login form. IdP profile → /oauth2/authorization/idp → Azure AD.',
+    activeNodes: ['node-auth', 'node-idp'],
+    activeConns: ['conn-auth-idp'],
+    httpPreview: `# Local profile (default):\nHTTP/1.1 302 Found\nLocation: /login\n\n# ── OR ── idp Spring profile active:\nHTTP/1.1 302 Found\nLocation: /oauth2/authorization/idp\n\n# Spring Security oauth2Login() redirects to:\nhttps://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize\n  ?client_id=azure-app-client-id\n  &response_type=code\n  &scope=openid+profile+email\n  &redirect_uri=https://auth.demo.ajfhir.com/login/oauth2/code/idp\n  &state=...\n\n# FederatedIdentityConfig.java:\n# oauth2Login() → FederatedIdentityIdTokenCustomizer\n# maps Azure AD claims → FHIR Practitioner reference`,
+    httpBadge: '302 → /login or IdP',
+    tokenState: 'none',
+    auditCount: 0,
+  },
+  /* 9 */ {
+    n: 10,
+    layer: 'auth',
+    label: 'Clinician authenticates',
+    detail: 'dr.smith authenticates via form login (dev profile) or Azure AD. Session established. Spring Security context populated.',
+    activeNodes: ['node-browser', 'node-auth'],
+    activeConns: ['conn-browser-auth'],
+    httpPreview: `# Local form login (dev profile):\nPOST /login HTTP/1.1\nContent-Type: application/x-www-form-urlencoded\n\nusername=dr.smith&password=***&_csrf=token\n\nHTTP/1.1 302 Found\nLocation: /oauth2/authorize?...(original request)\nSet-Cookie: JSESSIONID=abc123; HttpOnly; SameSite=Lax\n\n# IdTokenBuilder.buildClaims("dr.smith") adds:\n# "name" : "Dr. Jane Smith"\n# "fhirUser" : "Practitioner/Practitioner-EXAMPLE-001"`,
+    httpBadge: 'POST /login → session',
+    tokenState: 'none',
+    auditCount: 0,
+  },
+  /* 10 */ {
+    n: 11,
+    layer: 'auth',
+    label: 'Launch token resolved → patient context',
+    detail: 'Auth Server atomically resolves the launch token: UPDATE launch_contexts SET used=true WHERE token=? AND used=false. Patient + encounter extracted.',
+    activeNodes: ['node-auth'],
+    activeConns: [],
+    httpPreview: `# Inside AuthorizationServerConfig:\n# SmartTokenCustomizer.customize() resolves launch context\n\nSQL: UPDATE launch_contexts\n  SET used = true\n  WHERE token = 'a8f3d2c1-4e5b-...'\n    AND used  = false    ← atomic guard\n    AND expires_at > NOW()\nRETURNING patient_id, encounter_id\n\n# Result:\npatient_id   = "ePatient-8675309"\nencounter_id = "eEnc-001"\n\n# These become top-level token response fields\n# patient= and encounter= (SMART spec requirement)\n# NOT just JWT claims — this is what most\n# implementations get wrong`,
+    httpBadge: 'Launch token resolved',
+    tokenState: 'none',
+    auditCount: 0,
+    highlight: 'Atomic UPDATE — race condition impossible',
+  },
+  /* 11 */ {
+    n: 12,
+    layer: 'token',
+    label: 'Auth Server issues RS256 access token',
+    detail: 'SmartTokenCustomizer adds patient + encounter as JWT claims (implementation-specific). The canonical SMART delivery is top-level JSON in the token response body — demonstrated at step 15. RS256 signed with server RSA key.',
+    activeNodes: ['node-auth'],
+    activeConns: [],
+    httpPreview: `# SmartTokenCustomizer.customize() injects\n# SMART-specific claims into the JWT:\n\nJWT Header:\n{\n  "alg": "RS256",\n  "kid": "smart-fhir-server-key-001"\n}\n\nJWT Payload (access_token claims):\n{\n  "sub"     : "dr.smith",\n  "iss"     : "https://auth.demo.ajfhir.com",\n  "aud"     : "https://fhir.demo.ajfhir.com/fhir",\n  "exp"     : 1753920000,\n  "iat"     : 1753916400,\n  "scope"   : "launch openid fhirUser patient/Patient.rs patient/Condition.rs patient/Observation.rs",\n  "patient" : "ePatient-8675309",\n  "encounter": "eEnc-001"\n}\n\n# Signed: base64(header).base64(payload).RS256sig`,
+    httpBadge: 'JWT RS256 issued',
+    tokenState: 'partial',
+    auditCount: 0,
+  },
+  /* 12 */ {
+    n: 13,
+    layer: 'token',
+    label: 'Authorization code issued → callback',
+    detail: 'Auth Server issues short-lived auth code. Browser redirects to SMART Client /callback with code + state. State validated against original.',
+    activeNodes: ['node-browser', 'node-auth'],
+    activeConns: ['conn-smart-auth'],
+    httpPreview: `HTTP/1.1 302 Found\nLocation: http://localhost:8080/callback\n  ?code=SplxlOBeZQQYbYS6WxSbIA\n  &state=hTFoLkoM8dp6X3NE\n\n# SMART Client validates:\n# state == original state (CSRF protection ✓)\n# code is single-use, 60-second TTL`,
+    httpBadge: '302 → /callback?code=',
+    tokenState: 'partial',
+    auditCount: 0,
+  },
+  /* 13 */ {
+    n: 14,
+    layer: 'token',
+    label: 'Token exchange — code + PKCE verifier',
+    detail: 'POST /oauth2/token with auth code + code_verifier. Auth Server recomputes SHA-256(verifier) and verifies == original challenge.',
+    activeNodes: ['node-browser', 'node-auth'],
+    activeConns: ['conn-smart-auth'],
+    httpPreview: `POST /oauth2/token HTTP/1.1\nHost: auth.demo.ajfhir.com:9000\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type    = authorization_code\ncode          = SplxlOBeZQQYbYS6WxSbIA\nclient_id     = akhester-smart-client\nredirect_uri  = http://localhost:8080/callback\ncode_verifier = dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\n\n# Auth Server verifies:\n# SHA-256("dBjftJeZ4CVP...") == "E9Melhoa2OwvFrEMT..."\n# PKCE check ✓ — code injection attack prevented`,
+    httpBadge: 'POST /oauth2/token',
+    tokenState: 'partial',
+    auditCount: 0,
+    isCentrepiece: true,
+    centrepieceLabel: '🔑 Token exchange',
+  },
+  /* 14 */ {
+    n: 15,
+    layer: 'token',
+    label: 'Token response — SMART extras as top-level JSON',
+    detail: 'SmartTokenResponseConverter produces the response. patient, encounter, need_patient_banner are TOP-LEVEL JSON fields — not just JWT claims.',
+    activeNodes: ['node-auth', 'node-browser'],
+    activeConns: ['conn-smart-auth'],
+    httpPreview: `HTTP/1.1 200 OK\nContent-Type: application/json\n\n{\n  "access_token"       : "eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0...",\n  "token_type"         : "Bearer",\n  "expires_in"         : 3600,\n  "scope"              : "launch openid fhirUser patient/Patient.rs patient/Condition.rs",\n  "refresh_token"      : "eyJhbGciOiJSUzI1NiIsImtpZCI6...",\n  "patient"            : "ePatient-8675309",\n  "encounter"          : "eEnc-001",\n  "need_patient_banner": true,\n  "id_token"           : "eyJhbGciOiJSUzI1NiIsImtpZCI6..."\n}\n\n# patient + encounter + need_patient_banner\n# are TOP-LEVEL JSON fields (SMART v2.2 spec)\n# NOT embedded inside the JWT\n# This is what most implementations get wrong`,
+    httpBadge: '200 token response',
+    tokenState: 'full',
+    auditCount: 0,
+    isCentrepiece: true,
+    centrepieceLabel: '★ SMART token response',
+  },
+  /* 15 */ {
+    n: 16,
+    layer: 'fhir',
+    label: 'SMART Client queries HAPI FHIR with Bearer token',
+    detail: 'GET /fhir/Patient/{id} with Authorization: Bearer. SmartScopeInterceptor fires before any data is touched.',
+    activeNodes: ['node-browser', 'node-hapi'],
+    activeConns: ['conn-smart-hapi'],
+    httpPreview: `GET /fhir/Patient/ePatient-8675309 HTTP/1.1\nHost: fhir.demo.ajfhir.com:8080\nAuthorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0...\nAccept: application/fhir+json\n\n# SmartScopeInterceptor fires FIRST:\n# 1. Verifies RS256 JWT via RemoteJWKSet\n#    → GET /oauth2/jwks (cached)\n# 2. Extracts scope claim from JWT\n#    scope = "patient/Patient.rs patient/Condition.rs"\n# 3. Checks: resource=Patient, method=GET\n#    patient/Patient.rs → .rs = read + search ✓\n# 4. PASSES → HAPI JPA processes the request`,
+    httpBadge: 'GET /fhir/Patient/{id}',
+    tokenState: 'full',
+    auditCount: 0,
+    isCentrepiece: true,
+    centrepieceLabel: '🛡 Scope enforcement',
+  },
+  /* 16 */ {
+    n: 17,
+    layer: 'fhir',
+    label: 'HAPI returns FHIR R4 Patient resource',
+    detail: 'Scope validated — HAPI JPA executes query. Full FHIR R4 Patient resource returned. SMART app renders patient data.',
+    activeNodes: ['node-hapi', 'node-browser'],
+    activeConns: ['conn-smart-hapi'],
+    httpPreview: `HTTP/1.1 200 OK\nContent-Type: application/fhir+json\n\n{\n  "resourceType" : "Patient",\n  "id"           : "ePatient-8675309",\n  "meta": { "versionId": "1", "lastUpdated": "2025-01-15T10:30:00Z" },\n  "name"         : [{ "family": "Smith", "given": ["John", "A"] }],\n  "birthDate"    : "1972-04-14",\n  "gender"       : "male",\n  "identifier"   : [{ "system": "urn:oid:1.2.840.114350.1.13.0",\n                       "value": "MRN-00123456" }],\n  "address"      : [{\n    "line": ["123 Main St"], "city": "Springfield",\n    "state": "IL", "postalCode": "62701"\n  }]\n}`,
+    httpBadge: '200 FHIR Patient',
+    tokenState: 'full',
+    auditCount: 0,
+  },
+  /* 17 */ {
+    n: 18,
+    layer: 'audit',
+    label: 'AuditEvent written asynchronously',
+    detail: '@EventListener writes FHIR AuditEvent to PostgreSQL. Non-repudiation. IHE ATNA compliant. Never blocks the request path.',
+    activeNodes: ['node-hapi', 'node-audit'],
+    activeConns: ['conn-hapi-audit'],
+    httpPreview: `# AuditService.logFhirAccess() — async @EventListener\n# Fires AFTER response sent to client\n# Never blocks request path\n\nPOST (internal) → PostgreSQL audit_events table:\n\n{\n  "resourceType" : "AuditEvent",\n  "id"           : "audit-20250115-103042-001",\n  "type"         : { "system": "http://dicom.nema.org/resources/ontology/DCM",\n                     "code": "110112", "display": "Query" },\n  "action"       : "R",\n  "recorded"     : "2025-01-15T10:30:42.123Z",\n  "outcome"      : "0",\n  "agent"        : [{ "who": { "reference": "Practitioner/Practitioner-EXAMPLE-001" },\n                      "requestor": true,\n                      "name": "Dr. Jane Smith" }],\n  "entity"       : [{ "what": { "reference": "Patient/ePatient-8675309" },\n                      "type": { "code": "1", "display": "Person" } }]\n}\n\n# IHE ATNA compliant · HIPAA audit trail · GDPR Article 30`,
+    httpBadge: 'AuditEvent written',
+    tokenState: 'full',
+    auditCount: 1,
+    isCentrepiece: false,
+  },
+  /* 18 */ {
+    n: 19,
+    layer: 'consent',
+    label: 'Consent check — before FHIR data released',
+    detail: 'ConsentEnforcementInterceptor fires on every FHIR request. Queries FHIR Consent record for patient + client combination before returning data.',
+    activeNodes: ['node-hapi', 'node-consent'],
+    activeConns: ['conn-hapi-consent'],
+    httpPreview: `GET /fhir/Consent?patient=ePatient-8675309&actor=akhester-smart-client HTTP/1.1\nHost: hapi.demo.ajfhir.com:8080\nAuthorization: Bearer eyJhbGci...\n\n# ConsentEnforcementInterceptor queries FHIR Consent\n# resource for this patient + client combination`,
+    httpBadge: 'GET /fhir/Consent',
+    tokenState: 'full',
+    auditCount: 3,
+  },
+
+  /* 19 */ {
+    n: 20,
+    layer: 'consent',
+    label: 'FHIR Consent resource evaluated',
+    detail: 'Consent resource returned. ConsentEnforcementInterceptor checks: provision.type=permit, provision.class includes Observation, status=active, period covers today.',
+    activeNodes: ['node-consent', 'node-hapi'],
+    activeConns: ['conn-hapi-consent'],
+    httpPreview: `HTTP/1.1 200 OK\nContent-Type: application/fhir+json\n\n{\n  "resourceType": "Consent",\n  "status": "active",\n  "patient": { "reference": "Patient/ePatient-8675309" },\n  "provision": {\n    "type": "permit",\n    "period": { "start": "2024-01-01", "end": "2025-12-31" },\n    "actor": [{ "reference": { "reference": "Device/akhester-smart-client" }}],\n    "action": [{ "coding": [{ "code": "access" }]}],\n    "class": [{ "code": "Observation" },{ "code": "Patient" }]\n  }\n}`,
+    httpBadge: 'Consent evaluated',
+    tokenState: 'full',
+    auditCount: 3,
+    isCentrepiece: true,
+    centrepieceLabel: '🔐 FHIR Consent',
+  },
+
+  /* 20 */ {
+    n: 21,
+    layer: 'consent',
+    label: 'Consent granted — access proceeds',
+    detail: 'provision.type=permit confirmed. ConsentEnforcementInterceptor allows the FHIR request. Consent decision written as AuditEvent asynchronously.',
+    activeNodes: ['node-hapi', 'node-consent', 'node-audit'],
+    activeConns: ['conn-hapi-consent', 'conn-hapi-audit'],
+    httpPreview: `# ConsentEnforcementInterceptor result:\n# provision.type   = "permit"  ✓\n# provision.class  includes Observation  ✓\n# status           = "active"  ✓\n# period           covers today  ✓\n# → Access GRANTED\n\n# Consent AuditEvent written async:\n{\n  "resourceType": "AuditEvent",\n  "subtype": [{ "code": "consent-verify" }],\n  "outcome": "0",\n  "entity": [{ "what": { "reference": "Consent/consent-P8675309" }}]\n}`,
+    httpBadge: 'Consent: GRANTED',
+    tokenState: 'full',
+    auditCount: 4,
+  },
+
+  /* 21 */ {
+    n: 22,
+    layer: 'consent',
+    label: 'Consent AuditEvent logged',
+    detail: 'IHE ATNA AuditEvent for consent decision. Audit log: Authentication + Token + Patient read + Consent granted (4 events).',
+    activeNodes: ['node-hapi', 'node-audit'],
+    activeConns: ['conn-hapi-audit'],
+    httpPreview: `# Audit log after step 22:\n# [1] Authentication     dr.smith → System           ✓\n# [2] Token issued       dr.smith → CardioApp         ✓\n# [3] FHIR Patient read  dr.smith → Patient/P8675309  ✓\n# [4] Consent granted    dr.smith → Consent/consent-P ✓`,
+    httpBadge: 'Consent logged',
+    tokenState: 'full',
+    auditCount: 4,
+  },
+
+  /* 22 */ {
+    n: 23,
+    layer: 'lab',
+    label: 'Lab order — CBC + lipid panel ServiceRequest',
+    detail: 'Dr. Priya orders CBC + lipid panel. POST /fhir/ServiceRequest with LOINC 58410-2. SmartScopeInterceptor checks patient/ServiceRequest.c scope.',
+    activeNodes: ['node-browser', 'node-hapi'],
+    activeConns: ['conn-smart-hapi'],
+    httpPreview: `POST /fhir/ServiceRequest HTTP/1.1\nHost: hapi.demo.ajfhir.com:8080\nAuthorization: Bearer eyJhbGci...\n\n{\n  "resourceType": "ServiceRequest",\n  "status": "active",\n  "intent": "order",\n  "code": { "coding": [{ "system": "http://loinc.org",\n    "code": "58410-2", "display": "CBC panel" }]},\n  "subject": { "reference": "Patient/ePatient-8675309" },\n  "requester": { "reference": "Practitioner/dr-smith" }\n}`,
+    httpBadge: 'POST ServiceRequest',
+    tokenState: 'full',
+    auditCount: 4,
+  },
+
+  /* 23 */ {
+    n: 24,
+    layer: 'lab',
+    label: 'Lab posts Observation results',
+    detail: 'Lab system POSTs three Observations: Hb 13.2 g/dL (Normal), WBC 7.4×10⁹/L (Normal), LDL 4.1 mmol/L (High). Each includes LOINC code, value, unit, reference range.',
+    activeNodes: ['node-lab', 'node-hapi'],
+    activeConns: ['conn-hapi-lab'],
+    httpPreview: `POST /fhir/Observation HTTP/1.1\n\n{\n  "resourceType": "Observation",\n  "status": "final",\n  "basedOn": [{ "reference": "ServiceRequest/sr-lab-001" }],\n  "code": { "coding": [{ "system": "http://loinc.org",\n    "code": "718-7", "display": "Hemoglobin" }]},\n  "subject": { "reference": "Patient/ePatient-8675309" },\n  "valueQuantity": { "value": 13.2, "unit": "g/dL" },\n  "referenceRange": [{ "low": { "value": 12.0 }, "high": { "value": 16.0 }}],\n  "interpretation": [{ "coding": [{ "code": "N", "display": "Normal" }]}]\n}`,
+    httpBadge: 'POST Observations',
+    tokenState: 'full',
+    auditCount: 4,
+  },
+
+  /* 24 */ {
+    n: 25,
+    layer: 'lab',
+    label: 'DiagnosticReport wraps results',
+    detail: 'Lab creates DiagnosticReport linking back to ServiceRequest via .basedOn. Wraps all Observations. SMART app reads via GET /fhir/DiagnosticReport.',
+    activeNodes: ['node-lab', 'node-hapi'],
+    activeConns: ['conn-hapi-lab'],
+    httpPreview: `POST /fhir/DiagnosticReport HTTP/1.1\n\n{\n  "resourceType": "DiagnosticReport",\n  "status": "final",\n  "basedOn": [{ "reference": "ServiceRequest/sr-lab-001" }],\n  "subject": { "reference": "Patient/ePatient-8675309" },\n  "result": [\n    { "reference": "Observation/obs-hb-001" },\n    { "reference": "Observation/obs-wbc-001" },\n    { "reference": "Observation/obs-ldl-001" }\n  ],\n  "conclusion": "CBC normal. LDL elevated: 4.1 mmol/L (ref <3.4)"\n}`,
+    httpBadge: 'DiagnosticReport',
+    tokenState: 'full',
+    auditCount: 4,
+    isCentrepiece: true,
+    centrepieceLabel: '🧪 Lab results chain',
+  },
+
+  /* 25 */ {
+    n: 26,
+    layer: 'lab',
+    label: 'SMART app reads lab results',
+    detail: 'GET /fhir/DiagnosticReport?patient=P8675309. Scope + consent both checked. Lab DiagnosticReport with all Observations returned.',
+    activeNodes: ['node-browser', 'node-hapi'],
+    activeConns: ['conn-smart-hapi'],
+    httpPreview: `GET /fhir/DiagnosticReport?patient=ePatient-8675309 HTTP/1.1\nAuthorization: Bearer eyJhbGci...\n\n# SmartScopeInterceptor: patient/Observation.rs  ✓\n# ConsentEnforcementInterceptor: Observation permitted  ✓\n\nHTTP/1.1 200 OK\n# DiagnosticReport + Observation bundle returned`,
+    httpBadge: 'GET DiagnosticReport',
+    tokenState: 'full',
+    auditCount: 5,
+  },
+
+  /* 26 */ {
+    n: 27,
+    layer: 'imaging',
+    label: 'Imaging order — chest X-ray',
+    detail: 'Dr. Priya orders chest AP X-ray. ServiceRequest with LOINC 24748-4. Imaging category triggers PACS workflow. PACS creates ImagingStudy resource.',
+    activeNodes: ['node-browser', 'node-hapi', 'node-pacs'],
+    activeConns: ['conn-smart-hapi', 'conn-hapi-pacs'],
+    httpPreview: `POST /fhir/ServiceRequest HTTP/1.1\n\n{\n  "resourceType": "ServiceRequest",\n  "intent": "order",\n  "category": [{ "coding": [{ "code": "363679005", "display": "Imaging" }]}],\n  "code": { "coding": [{ "system": "http://loinc.org",\n    "code": "24748-4", "display": "Chest AP" }]},\n  "subject": { "reference": "Patient/ePatient-8675309" }\n}`,
+    httpBadge: 'Imaging order',
+    tokenState: 'full',
+    auditCount: 5,
+  },
+
+  /* 27 */ {
+    n: 28,
+    layer: 'imaging',
+    label: 'PACS creates ImagingStudy resource',
+    detail: 'PACS posts FHIR ImagingStudy wrapping DICOM metadata. Contains WADO-RS endpoint for image retrieval. FHIR wraps DICOM — does not replace it.',
+    activeNodes: ['node-pacs', 'node-hapi'],
+    activeConns: ['conn-hapi-pacs'],
+    httpPreview: `POST /fhir/ImagingStudy HTTP/1.1\n\n{\n  "resourceType": "ImagingStudy",\n  "status": "available",\n  "modality": [{ "code": "DX" }],\n  "subject": { "reference": "Patient/ePatient-8675309" },\n  "numberOfInstances": 2,\n  "endpoint": [{ "address": "https://pacs.hospital.lk/wado-rs/studies/1.2.840..." }],\n  "series": [{\n    "uid": "1.2.3.4.5.6789",\n    "modality": { "code": "DX" },\n    "numberOfInstances": 2\n  }]\n}`,
+    httpBadge: 'POST ImagingStudy',
+    tokenState: 'full',
+    auditCount: 5,
+    isCentrepiece: true,
+    centrepieceLabel: '📷 DICOM · ImagingStudy',
+  },
+
+  /* 28 */ {
+    n: 29,
+    layer: 'imaging',
+    label: 'Radiologist report + WADO-RS image access',
+    detail: 'Radiologist creates DiagnosticReport referencing ImagingStudy. SMART app reads report and fetches images via WADO-RS endpoint. Scope patient/ImagingStudy.rs checked.',
+    activeNodes: ['node-pacs', 'node-hapi', 'node-browser'],
+    activeConns: ['conn-hapi-pacs', 'conn-smart-hapi'],
+    httpPreview: `# DiagnosticReport with ImagingStudy reference:\n{\n  "imagingStudy": [{ "reference": "ImagingStudy/study-cxr-001" }],\n  "conclusion": "No acute cardiopulmonary process",\n  "conclusionCode": [{ "coding": [{ "system": "http://snomed.info/sct",\n    "code": "168573006" }]}]\n}\n\n# SMART app fetches image via WADO-RS (outside FHIR scope):\nGET https://pacs.hospital.lk/wado-rs/studies/1.2.840.../`,
+    httpBadge: 'Imaging report',
+    tokenState: 'full',
+    auditCount: 6,
+  },
+
+  /* 29 */ {
+    n: 30,
+    layer: 'referral',
+    label: 'Referral ServiceRequest created',
+    detail: 'Dr. Priya refers patient to cardiac specialist at Central Hospital. ServiceRequest intent=referral. Referral Module creates linked Task for workflow tracking.',
+    activeNodes: ['node-browser', 'node-hapi', 'node-referral'],
+    activeConns: ['conn-smart-hapi', 'conn-hapi-referral'],
+    httpPreview: `POST /fhir/ServiceRequest HTTP/1.1\n\n{\n  "resourceType": "ServiceRequest",\n  "intent": "referral",\n  "code": { "coding": [{ "code": "306206005",\n    "display": "Referral to cardiology" }]},\n  "subject": { "reference": "Patient/ePatient-8675309" },\n  "performer": [{ "reference": "Organization/central-hospital-cardiology" }],\n  "reasonReference": [{ "reference": "Condition/cond-angina-001" }]\n}`,
+    httpBadge: 'POST Referral',
+    tokenState: 'full',
+    auditCount: 6,
+  },
+
+  /* 30 */ {
+    n: 31,
+    layer: 'referral',
+    label: 'Task created + cross-facility consent check',
+    detail: 'Referral Module creates Task (status: requested). ConsentEnforcementInterceptor checks patient consent for cross-facility data sharing before Task is dispatched.',
+    activeNodes: ['node-referral', 'node-consent', 'node-hapi'],
+    activeConns: ['conn-hapi-referral', 'conn-consent-referral', 'conn-hapi-consent'],
+    httpPreview: `POST /fhir/Task HTTP/1.1\n{\n  "resourceType": "Task",\n  "status": "requested",\n  "intent": "order",\n  "focus": { "reference": "ServiceRequest/sr-referral-001" },\n  "for": { "reference": "Patient/ePatient-8675309" },\n  "owner": { "reference": "Organization/central-hospital-cardiology" }\n}\n\n# Cross-facility consent check:\n# provision.actor includes central-hospital-cardiology?  ✓`,
+    httpBadge: 'Task + consent',
+    tokenState: 'full',
+    auditCount: 6,
+    isCentrepiece: true,
+    centrepieceLabel: '📋 Referral · Task',
+  },
+
+  /* 31 */ {
+    n: 32,
+    layer: 'referral',
+    label: 'Receiving facility accepts referral',
+    detail: 'Central Hospital cardiology accepts Task. Status → accepted. Patient context available to receiving facility. Appointment scheduled.',
+    activeNodes: ['node-referral', 'node-hapi'],
+    activeConns: ['conn-hapi-referral'],
+    httpPreview: `PATCH /fhir/Task/task-referral-001\n[{ "op": "replace", "path": "/status", "value": "accepted" }]\n\nHTTP/1.1 200 OK\n{\n  "status": "accepted",\n  "note": [{ "text": "Cardiology appt: 2025-02-01" }]\n}`,
+    httpBadge: 'Task accepted',
+    tokenState: 'full',
+    auditCount: 6,
+  },
+
+  /* 32 */ {
+    n: 33,
+    layer: 'referral',
+    label: 'Referral complete — Task closed',
+    detail: 'Specialist completes consultation. Task.status → completed. Output references specialist DiagnosticReport. Full care episode documented in FHIR.',
+    activeNodes: ['node-referral', 'node-hapi', 'node-audit'],
+    activeConns: ['conn-hapi-referral', 'conn-referral-audit'],
+    httpPreview: `PATCH /fhir/Task/task-referral-001\n[{ "op": "replace", "path": "/status", "value": "completed" }]\n\n{\n  "output": [{\n    "type": { "coding": [{ "code": "DiagnosticReport" }]},\n    "valueReference": { "reference": "DiagnosticReport/dr-cardiology-001" }\n  }]\n}`,
+    httpBadge: 'Referral complete',
+    tokenState: 'full',
+    auditCount: 7,
+  },
+
+  /* 33 */ {
+    n: 34,
+    layer: 'audit',
+    label: '7 AuditEvents — complete ATNA audit trail',
+    detail: 'Full IHE ATNA audit trail for the patient encounter. Authentication, Token, Patient read, Consent, Lab, Imaging, Referral — every access logged. GDPR Art.30 · HIPAA § 164.312.',
+    activeNodes: ['node-hapi', 'node-audit'],
+    activeConns: ['conn-hapi-audit'],
+    httpPreview: `# IHE ATNA Audit Trail — Complete Patient Encounter\n# Patient: P. Kumar  Clinician: Dr. Priya Smith\n#\n# [1] Authentication      dr.smith → System             ✓ step 9\n# [2] Token issued        dr.smith → CardioApp          ✓ step 14\n# [3] FHIR Patient read   dr.smith → Patient/P8675309   ✓ step 17\n# [4] Consent granted     dr.smith → Consent/consent-P  ✓ step 22\n# [5] Lab result read     dr.smith → DiagnosticReport   ✓ step 27\n# [6] ImagingStudy access dr.smith → ImagingStudy/cxr   ✓ step 30\n# [7] Referral created    dr.smith → Task/referral-001  ✓ step 33\n#\n# GDPR Art.30 · HIPAA §164.312 · IHE ATNA · DISHA`,
+    httpBadge: '7 AuditEvents',
+    tokenState: 'full',
+    auditCount: 7,
+    isCentrepiece: true,
+    centrepieceLabel: '📊 Full ATNA audit trail',
+  },
+];
+
+/* ── State ─────────────────────────────────────────────────────────── */
+const state = {
+  current: -1,   // -1 = pre-start, 0–17 = active step
+  playing: false,
+  playTimer: null,
+};
+
+/* ── Build step dots ────────────────────────────────────────────────── */
+function buildDots() {
+  const container = DOM.stepDots;
+  container.innerHTML = '';
+
+  // Layer group separators — a thin line every time layer changes
+  let lastLayer = null;
+  STEPS.forEach((step, i) => {
+    if (step.layer !== lastLayer && lastLayer !== null) {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'width:1px;height:14px;background:rgba(184,212,232,.2);flex-shrink:0;margin:0 2px;';
+      container.appendChild(sep);
+    }
+    lastLayer = step.layer;
+
+    const dot = document.createElement('button');
+    dot.className = 'step-dot';
+    dot.id = 'dot-' + i;
+    dot.title = `Step ${i+1}: ${step.label}`;
+    // Colour by layer
+    dot.dataset.layer = step.layer;
+    dot.addEventListener('click', () => goTo(i));
+    container.appendChild(dot);
+  });
+}
+
+/* ── Refresh dot states ──────────────────────────────────────────────── */
+function refreshDots() {
+  STEPS.forEach((_, i) => {
+    const dot = document.getElementById('dot-' + i);
+    if (!dot) return;
+    const layerColor = LAYERS[STEPS[i].layer].color;
+    dot.classList.remove('active', 'done');
+    if (i === state.current) {
+      dot.classList.add('active');
+      dot.style.background = layerColor;
+      dot.style.borderColor = layerColor;
+      dot.style.boxShadow = `0 0 6px ${layerColor}80`;
+    } else if (i < state.current) {
+      dot.classList.add('done');
+      dot.style.background = layerColor + '60';
+      dot.style.borderColor = layerColor + '80';
+      dot.style.boxShadow = '';
+    } else {
+      dot.style.background = '';
+      dot.style.borderColor = '';
+      dot.style.boxShadow = '';
+    }
+  });
+}
+
+/* ── Apply node + connection states ──────────────────────────────────── */
+const ALL_NODES = ['node-epic','node-browser','node-auth','node-idp','node-hapi','node-audit','node-consent','node-lab','node-pacs','node-referral'];
+const ALL_CONNS = ['conn-epic-browser','conn-browser-auth','conn-auth-hapi',
+                   'conn-browser-smart','conn-smart-auth','conn-auth-idp',
+                   'conn-hapi-audit','conn-smart-hapi',
+                   'conn-hapi-consent','conn-hapi-lab','conn-hapi-pacs',
+                   'conn-hapi-referral','conn-lab-audit','conn-pacs-audit',
+                   'conn-referral-audit','conn-consent-referral'];
+
+function applyNodeStates(step) {
+  // Determine which nodes are "done" (were active in a previous step)
+  const doneNodes = new Set();
+  for (let i = 0; i < state.current; i++) {
+    STEPS[i].activeNodes.forEach(n => doneNodes.add(n));
+  }
+
+  ALL_NODES.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('active', 'teal', 'done', 'lab', 'pacs', 'consent', 'referral');
+    if (step.activeNodes.includes(id)) {
+      if (['node-hapi','node-audit','node-consent','node-referral'].includes(id)) {
+        el.classList.add('teal');
+      } else if (id === 'node-lab') {
+        el.classList.add('lab');
+      } else if (id === 'node-pacs') {
+        el.classList.add('pacs');
+      } else {
+        el.classList.add('active');
+      }
+    } else if (doneNodes.has(id)) {
+      el.classList.add('done');
+    }
+    // else: idle (default)
+  });
+}
+
+function applyConnStates(step) {
+  const TEAL_CONNS   = ['conn-smart-hapi','conn-hapi-audit','conn-auth-hapi','conn-hapi-consent','conn-hapi-lab','conn-hapi-pacs','conn-hapi-referral','conn-lab-audit','conn-pacs-audit','conn-referral-audit','conn-consent-referral'];
+  ALL_CONNS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('active', 'teal');
+    if (step.activeConns.includes(id)) {
+      if (TEAL_CONNS.includes(id)) {
+        el.classList.add('teal');
+        el.setAttribute('marker-end', 'url(#arr-teal)');
+      } else {
+        el.classList.add('active');
+        el.setAttribute('marker-end', 'url(#arr-green)');
+      }
+    } else {
+      el.setAttribute('marker-end', 'url(#arr-dim)');
+    }
+  });
+}
+
+/* ── Update bottom bar UI ─────────────────────────────────────────────── */
+function updateBottomBar(step) {
+  // Step counter
+  DOM.stepCounter.textContent = `${step.n} / 34`;
+
+  // Step label
+  DOM.stepLabel.innerHTML =
+    `<span style="color:${LAYERS[step.layer].color};font-weight:700;font-size:11px;
+      background:rgba(0,0,0,.3);padding:1px 7px;border-radius:4px;margin-right:.5rem;border:1px solid rgba(255,255,255,.1);">
+      ${LAYERS[step.layer].label.toUpperCase()}
+    </span>${step.label}`;
+
+  // Flow panel badge
+  DOM.flowStepLabel.textContent = `Step ${step.n} — ${step.label}`;
+
+  // Centrepiece badge on step info overlay
+  const info = document.getElementById('step-info');
+  if (step.isCentrepiece) {
+    info.textContent = step.centrepieceLabel;
+    info.style.display = 'block';
+    info.style.color = LAYERS[step.layer].color;
+    info.style.borderColor = LAYERS[step.layer].color + '50';
+    info.style.background = LAYERS[step.layer].bg;
+  } else {
+    info.style.display = 'none';
+  }
+}
+
+/* ── Update panel content (stub — Tasks 4/5/7 replace with typewriter) ── */
+function updatePanels(step) {
+  // HTTP panel — plain text preview for now (Task 4 adds typewriter + syntax)
+  DOM.httpBadge.textContent = step.httpBadge || '—';
+  DOM.httpContent.innerHTML = `<pre style="margin:0;padding:.875rem 1rem;font-family:var(--font-mono);
+    font-size:12px;line-height:1.7;color:var(--text-muted);white-space:pre-wrap;">${
+    escHtml(step.httpPreview || '')
+  }</pre>`;
+  DOM.httpContent.scrollTop = 0;
+
+  // Token panel — state indicator (Task 5 replaces with JWT decoder)
+  DOM.tokenBadge.textContent = step.tokenState === 'full' ? 'Token received'
+                              : step.tokenState === 'partial' ? 'In progress...'
+                              : '—';
+  if (step.tokenState === 'none') {
+    DOM.tokenContent.innerHTML = `<div class="idle-state">
+      <div class="idle-icon">🔑</div>
+      <div>Token response will appear here</div>
+      <div style="color:#3D6A8A;font-size:11px;">Steps 13–15</div>
+    </div>`;
+  } else if (step.tokenState === 'partial') {
+    DOM.tokenContent.innerHTML = `<div style="padding:.875rem 1rem;font-size:12px;
+      color:#3D6A8A;font-family:var(--font-mono);">
+      <div style="color:var(--warn);margin-bottom:.5rem;">⏳ Token being issued…</div>
+      <div style="color:#3D6A8A;">access_token: [computing RS256 signature…]</div>
+      <div style="color:#3D6A8A;">patient: [resolving from launch context…]</div>
+    </div>`;
+  } else if (step.tokenState === 'full') {
+    DOM.tokenContent.innerHTML = `<div style="padding:.875rem 1rem;font-size:12px;
+      font-family:var(--font-mono);line-height:1.7;">
+      <div style="color:#0A7A6E;margin-bottom:.625rem;font-weight:700;">
+        ✓ Token response received
+      </div>
+      <div><span style="color:var(--key);">access_token</span><span style="color:#3D6A8A;">: </span><span style="color:var(--str);">"eyJhbGciOiJS…"</span></div>
+      <div><span style="color:var(--key);">token_type</span><span style="color:#3D6A8A;">:    </span><span style="color:var(--str);">"Bearer"</span></div>
+      <div><span style="color:var(--key);">expires_in</span><span style="color:#3D6A8A;">:    </span><span style="color:#90D8B8;">3600</span></div>
+      <div><span style="color:var(--key);">scope</span><span style="color:#3D6A8A;">:         </span><span style="color:var(--str);">"launch openid patient/Patient.rs"</span></div>
+      <div style="margin-top:.375rem;padding:.375rem .5rem;background:rgba(26,158,144,.1);border-left:2px solid var(--teal-light);border-radius:0 4px 4px 0;">
+        <span style="color:#0A7A6E;font-weight:700;">patient</span><span style="color:#3D6A8A;">:       </span><span style="color:var(--str);">"ePatient-8675309"</span>
+      </div>
+      <div style="margin-top:.25rem;padding:.375rem .5rem;background:rgba(26,158,144,.1);border-left:2px solid var(--teal-light);border-radius:0 4px 4px 0;">
+        <span style="color:#0A7A6E;font-weight:700;">encounter</span><span style="color:#3D6A8A;">:     </span><span style="color:var(--str);">"eEnc-001"</span>
+      </div>
+      <div style="margin-top:.25rem;">
+        <span style="color:var(--key);">need_patient_banner</span><span style="color:#3D6A8A;">: </span><span style="color:#C898E8;">true</span>
+      </div>
+      <div style="margin-top:.25rem;">
+        <span style="color:var(--key);">id_token</span><span style="color:#3D6A8A;">:      </span><span style="color:var(--str);">"eyJhbGciOiJS…"</span>
+      </div>
+    </div>`;
+  }
+
+  // Audit badge
+  if (step.auditCount > 0) {
+    DOM.auditBadge.textContent = `${step.auditCount} event${step.auditCount > 1 ? 's' : ''}`;
+    DOM.auditBadge.style.color = '#F0C060';
+    DOM.auditBadge.style.borderColor = 'rgba(240,192,96,.3)';
+  } else {
+    DOM.auditBadge.textContent = '0 events';
+    DOM.auditBadge.style.color = '#D8F2EE';  /* 6.9:1 on #0A5A50 ✓ */
+    DOM.auditBadge.style.background = '#0A5A50';
+    DOM.auditBadge.style.borderColor = '#084840';
+  }
+}
+
+/* ── Core render ────────────────────────────────────────────────────── */
+function renderStep(n) {
+  if (n < 0 || n >= STEPS.length) return;
+  state.current = n;
+  const step = STEPS[n];
+
+  applyNodeStates(step);
+  applyConnStates(step);
+  refreshDots();
+  updateBottomBar(step);
+  updatePanels(step);
+
+  // Update play button icon
+  DOM.btnPlay.textContent = state.playing ? '⏸' : '▶';
+
+  // Update prev/next enabled state
+  DOM.btnPrev.style.opacity = n === 0 ? '0.35' : '1';
+  DOM.btnNext.style.opacity = n === STEPS.length - 1 ? '0.35' : '1';
+}
+
+/* ── Navigation ────────────────────────────────────────────────────── */
+function goTo(n) {
+  if (n < 0) n = 0;
+  if (n >= STEPS.length) n = STEPS.length - 1;
+  renderStep(n);
+}
+function next() { goTo(state.current + 1); }
+function prev() { goTo(state.current - 1); }
+function restart() {
+  stopPlay();
+  // Reset all nodes to idle
+  ALL_NODES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('active','teal','done'); }
+  });
+  ALL_CONNS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove('active','teal');
+      el.setAttribute('marker-end', 'url(#arr-dim)');
+    }
+  });
+  state.current = -1;
+  refreshDots();
+  DOM.stepCounter.textContent = '0 / 34';
+  DOM.stepLabel.textContent = 'Press ▶ to start the simulation';
+  DOM.flowStepLabel.textContent = 'Waiting to start';
+  DOM.httpBadge.textContent = '—';
+  DOM.tokenBadge.textContent = '—';
+  DOM.auditBadge.textContent = '0 events';
+  DOM.httpContent.innerHTML = `<div class="idle-state"><div class="idle-icon">⇄</div>
+    <div>HTTP packets will appear here</div></div>`;
+  DOM.tokenContent.innerHTML = `<div class="idle-state"><div class="idle-icon">🔑</div>
+    <div>Token response will appear here</div></div>`;
+  DOM.auditContent.innerHTML = `<div class="idle-state"><div class="idle-icon">📋</div>
+    <div>Audit events will accumulate here</div></div>`;
+  DOM.btnPlay.textContent = '▶';
+  document.getElementById('step-info').style.display = 'none';
+  DOM.btnPrev.style.opacity = '0.35';
+  DOM.btnNext.style.opacity = '1';
+}
+
+function startPlay() {
+  state.playing = true;
+  DOM.btnPlay.textContent = '⏸';
+  // Advance to next step after delay; speed from select
+  scheduleNext();
+}
+function stopPlay() {
+  state.playing = false;
+  DOM.btnPlay.textContent = '▶';
+  if (state.playTimer) { clearTimeout(state.playTimer); state.playTimer = null; }
+}
+function scheduleNext() {
+  if (!state.playing) return;
+  const speed = parseFloat(DOM.speedSelect.value) || 1;
+  // Base delay 2.8s — Task 4 will use actual typewriter completion
+  const delay = Math.round(2800 / speed);
+  state.playTimer = setTimeout(() => {
+    if (!state.playing) return;
+    const next_n = state.current + 1;
+    if (next_n >= STEPS.length) {
+      stopPlay();
+      return;
+    }
+    renderStep(next_n);
+    scheduleNext();
+  }, delay);
+}
+function togglePlay() {
+  if (state.playing) {
+    stopPlay();
+  } else {
+    if (state.current >= STEPS.length - 1) restart();
+    if (state.current < 0) renderStep(0);
+    startPlay();
+  }
+}
+
+/* ── Wire up controls (replaces Task 1 no-ops) ─────────────────────── */
+DOM.btnPlay.removeEventListener('click', DOM.btnPlay._t1handler);
+DOM.btnNext.removeEventListener('click', DOM.btnNext._t1handler);
+DOM.btnPrev.removeEventListener('click', DOM.btnPrev._t1handler);
+DOM.btnRestart.removeEventListener('click', DOM.btnRestart._t1handler);
+
+DOM.btnPlay.onclick = togglePlay;  // Task 8 will replace this
+DOM.btnNext.onclick = () => { stopPlay(); next(); };
+DOM.btnPrev.onclick = () => { stopPlay(); prev(); };
+DOM.btnRestart.onclick = restart;
+
+/* ── Utility ────────────────────────────────────────────────────────── */
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Init ───────────────────────────────────────────────────────────── */
+buildDots();
+restart();  // set initial state cleanly
+
+// Expose for subsequent tasks
+window.DEMO.STEPS    = STEPS;
+window.DEMO.LAYERS   = LAYERS;
+window.DEMO.state    = state;
+window.DEMO.goTo     = goTo;
+window.DEMO.next     = next;
+window.DEMO.prev     = prev;
+window.DEMO.restart  = restart;
+window.DEMO.stopPlay = stopPlay;
+window.DEMO.renderStep = renderStep;
+window.DEMO.escHtml  = escHtml;
+
+console.log('TASK 2 complete ✓ — 18 steps loaded, navigation active');
+console.log('  STEPS available at window.DEMO.STEPS');
+console.log('  Navigation: goTo(n), next(), prev(), restart()');
+console.log('  Task 3 will add SVG packet-travel animations');
+
+})(); // end Task 2 IIFE
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 3 — SVG packet-travel animations + connection highlighting
+   ───────────────────────────────────────────────────────────────────
+   Adds:
+   • animatePacket(connId, color, duration) — moves a glowing dot
+     along any connection (line or path) using getPointAtLength()
+   • Each step triggers packet animation on its activeConns[]
+   • Connection lines switch from dashed-idle to solid-active
+   • Multiple packets can travel simultaneously on different lines
+   • renderStep hook — Task 3 wraps Task 2's renderStep to add FX
+   ═══════════════════════════════════════════════════════════════════ */
+(function() {
+
+const { DOM, STEPS, state, stopPlay } = window.DEMO;
+
+/* ── Packet pool — reuse SVG circles rather than create/destroy ── */
+const SVG   = document.getElementById('flow-svg');
+const POOL_SIZE = 4;
+const pool  = [];
+
+function getPacket() {
+  let p = pool.find(p => !p._busy);
+  if (!p) {
+    p = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    p.setAttribute('r', '5');
+    p.style.cssText = 'pointer-events:none;transition:none;';
+    SVG.appendChild(p);
+    pool.push(p);
+  }
+  p._busy = true;
+  return p;
+}
+
+function releasePacket(p) {
+  p._busy = false;
+  p.setAttribute('opacity', '0');
+}
+
+/* ── Animate a packet along a connection ────────────────────────── */
+function animatePacket(connId, color, durationMs) {
+  const el = document.getElementById(connId);
+  if (!el) return;
+
+  // Get total length — works for both <line> and <path>
+  let totalLen;
+  try { totalLen = el.getTotalLength(); }
+  catch(e) { return; }  // not a shape element
+
+  const packet = getPacket();
+  packet.setAttribute('fill', color);
+  packet.setAttribute('opacity', '1');
+
+  // Drop shadow matching the connection colour
+  const glow = color === '#1B4F8A'
+    ? 'drop-shadow(0 0 5px rgba(27,79,138,.7))'
+    : 'drop-shadow(0 0 5px rgba(13,122,110,.7))';
+  packet.style.filter = glow;
+
+  const start = performance.now();
+
+  function frame(now) {
+    const elapsed = now - start;
+    const t       = Math.min(elapsed / durationMs, 1);
+    // Ease in-out cubic
+    const eased   = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+    const dist    = eased * totalLen;
+
+    try {
+      const pt = el.getPointAtLength(dist);
+      packet.setAttribute('cx', pt.x);
+      packet.setAttribute('cy', pt.y);
+    } catch(e) {}
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      releasePacket(packet);
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+
+/* ── Determine packet colour and duration per connection ─────────── */
+const CONN_COLOUR = {
+  'conn-epic-browser':  '#1B4F8A',  // navy — EHR launch
+  'conn-browser-auth':  '#1B4F8A',  // navy — auth flow
+  'conn-auth-hapi':     '#0D7A6E',  // teal — FHIR data
+  'conn-auth-idp':      '#1B4F8A',  // navy — IdP federation
+  'conn-hapi-audit':    '#0D7A6E',  // teal — audit write
+  'conn-browser-smart': '#1B4F8A',  // navy — SMART launch
+  'conn-smart-auth':    '#1B4F8A',
+  'conn-hapi-consent':  '#0D7A6E',  // teal — consent check
+  'conn-hapi-lab':      '#854D0E',  // amber — lab order
+  'conn-hapi-pacs':     '#534AB7',  // purple — imaging
+  'conn-hapi-referral': '#0D7A6E',  // teal — referral
+  'conn-lab-audit':     '#854D0E',  // amber — lab audit
+  'conn-pacs-audit':    '#534AB7',  // purple — imaging audit
+  'conn-referral-audit':'#0D7A6E',  // teal — referral audit
+  'conn-consent-referral':'#0D7A6E',// teal — consent→referral check  // navy — token request
+  'conn-smart-hapi':    '#0D7A6E',  // teal — FHIR query
+};
+
+const CONN_DURATION = {
+  'conn-epic-browser':  600,
+  'conn-browser-auth':  500,
+  'conn-auth-hapi':     500,
+  'conn-auth-idp':      600,
+  'conn-hapi-audit':    800,  // longer — diagonal + async
+  'conn-browser-smart': 900,  // longer — routed curve
+  'conn-smart-auth':    700,  // routed curve
+  'conn-smart-hapi':    500,
+};
+
+/* ── Wrap renderStep to inject packet animations ──────────────────── */
+const _originalRender = window.DEMO.renderStep;
+
+window.DEMO.renderStep = function(n) {
+  // Call original Task 2 render first
+  _originalRender(n);
+
+  const step = STEPS[n];
+  if (!step) return;
+
+  // Fire a packet for each active connection, staggered slightly
+  step.activeConns.forEach((connId, i) => {
+    const color    = CONN_COLOUR[connId] || '#1B4F8A';
+    const duration = CONN_DURATION[connId] || 600;
+    const speed    = parseFloat(DOM.speedSelect.value) || 1;
+
+    // Stagger multiple connections by 120ms each
+    setTimeout(() => {
+      animatePacket(connId, color, Math.round(duration / speed));
+    }, i * 120);
+  });
+
+  // Update flow-step label with protocol context
+  const step_info_map = {
+    0:  'portal load',
+    1:  'server→server fetch',
+    2:  'launch trigger',
+    3:  'atomic token INSERT',
+    4:  'EHR redirect',
+    5:  'SMART discovery proxy',
+    6:  'PKCE S256 (client-side)',
+    7:  'authorize request',
+    8:  'login / IdP redirect',
+    9:  'authentication',
+    10: 'launch token resolved',
+    11: 'RS256 JWT issued',
+    12: 'auth code + callback',
+    13: 'PKCE token exchange',
+    14: 'token response',
+    15: 'Bearer FHIR request',
+    16: 'scope enforcement',
+    17: 'audit write (async)',
+  };
+  const ctx = step_info_map[n] || '';
+  if (ctx) DOM.flowStepLabel.textContent = `Step ${step.n} — ${ctx}`;
+};
+
+console.log('TASK 3 complete ✓ — packet animations active');
+console.log('  animatePacket(connId, color, ms) available');
+console.log('  Task 4 will add typewriter HTTP panel');
+
+})(); // end Task 3 IIFE
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 4 — Typewriter HTTP panel + syntax highlighting
+   ───────────────────────────────────────────────────────────────────
+   Adds:
+   • typewriter(el, html, charDelay, onDone) — streams HTML into el
+     character by character, handles tags atomically (never splits)
+   • syntaxHighlight(rawText) — converts plain HTTP/JSON/comment text
+     into syntax-coloured HTML spans using the CSS classes defined
+     in Task 1 (.http-method .http-url .http-key .http-str etc.)
+   • Wraps renderStep again — on each step, clears the HTTP panel,
+     types the highlighted content, updates the badge
+   • onDone callback signals Task 9 (auto-play) when typing finishes
+   ═══════════════════════════════════════════════════════════════════ */
+(function() {
+
+const { DOM, STEPS, state } = window.DEMO;
+
+/* ── Syntax highlighter ─────────────────────────────────────────── */
+function syntaxHighlight(raw) {
+  // raw is the httpPreview string with literal \n already replaced by newlines
+  const lines = raw.split('\n');
+  return lines.map(line => {
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // Comment lines
+    if (line.trimStart().startsWith('#')) {
+      return `<span class="http-comment">${esc(line)}</span>`;
+    }
+
+    // HTTP status lines  e.g. "HTTP/1.1 200 OK"
+    if (/^HTTP\/\d/.test(line)) {
+      const m = line.match(/^(HTTP\/[\d.]+)\s+(\d+)\s*(.*)$/);
+      if (m) {
+        const cls = m[2].startsWith('2') ? 'http-status-ok'
+                  : m[2].startsWith('3') ? 'http-method'
+                  : 'http-status-err';
+        return `<span class="http-header">HTTP/${m[1].slice(5)}</span> <span class="${cls}">${esc(m[2])} ${esc(m[3])}</span>`;
+      }
+    }
+
+    // HTTP request line  e.g. "GET /path HTTP/1.1"
+    if (/^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s/.test(line)) {
+      const parts = line.split(' ');
+      return `<span class="http-method">${esc(parts[0])}</span> <span class="http-url">${esc(parts[1])}</span>`
+           + (parts[2] ? ` <span class="http-header">${esc(parts[2])}</span>` : '');
+    }
+
+    // HTTP header  e.g. "Content-Type: application/json"
+    if (/^[A-Za-z][\w-]+:\s/.test(line)) {
+      const colon = line.indexOf(':');
+      const key = line.slice(0, colon);
+      const val = line.slice(colon + 1);
+      // Special highlight for Authorization header
+      if (key.toLowerCase() === 'authorization') {
+        const parts = val.trim().split(' ');
+        return `<span class="http-header">${esc(key)}</span>:`
+             + ` <span class="http-method">${esc(parts[0])}</span>`
+             + (parts[1] ? ` <span class="http-str">${esc(parts[1].slice(0,20))}…</span>` : '');
+      }
+      return `<span class="http-header">${esc(key)}</span>:<span class="http-muted">${esc(val)}</span>`;
+    }
+
+    // Query parameter  e.g. "response_type = code"
+    if (/^\s*[\w_]+\s*=\s/.test(line)) {
+      const eq = line.indexOf('=');
+      const key = line.slice(0, eq);
+      const val = line.slice(eq + 1);
+      return `<span class="http-key">${esc(key)}</span><span class="http-arrow">=</span><span class="http-str">${esc(val)}</span>`;
+    }
+
+    // JSON key-value  e.g.  "  \"access_token\": \"eyJ...\""
+    if (/^\s+"[\w_]+"/.test(line)) {
+      return line.replace(
+        /("[\w_]+")\s*:\s*(".*?"|true|false|null|\d+)/g,
+        (_, k, v) => {
+          const vClass = v.startsWith('"') ? 'http-str'
+                       : (v === 'true' || v === 'false') ? 'http-bool'
+                       : v === 'null' ? 'http-bool'
+                       : 'http-num';
+          // Truncate very long JWT strings
+          let display = esc(v);
+          if (v.startsWith('"eyJ') && v.length > 24) {
+            display = `"<span style="opacity:.7">${esc(v.slice(1,16))}…</span>"`;
+          }
+          return `<span class="http-key">${esc(k)}</span>: <span class="${vClass}">${display}</span>`;
+        }
+      );
+    }
+
+    // SQL lines
+    if (/^(SQL:|SELECT|INSERT|UPDATE|DELETE|RETURNING)\b/.test(line.trimStart())) {
+      return `<span class="http-ann">${esc(line)}</span>`;
+    }
+
+    // Arrow lines (→, ←, →)
+    if (line.includes('→') || line.includes('←')) {
+      return `<span class="http-arrow">${esc(line)}</span>`;
+    }
+
+    // Blank line
+    if (line.trim() === '') return '';
+
+    // Default — muted
+    return `<span style="color:var(--text-muted)">${esc(line)}</span>`;
+  }).join('\n');
+}
+
+/* ── Typewriter engine ────────────────────────────────────────────── */
+let _twCancel = null;  // cancel token for current typewrite
+
+function typewrite(el, htmlContent, charDelay, onDone) {
+  // Cancel any in-progress typewriter
+  if (_twCancel) { _twCancel(); _twCancel = null; }
+
+  el.innerHTML = '';
+
+  // We type into a <pre> inside the scroll container
+  const pre = document.createElement('pre');
+  pre.style.cssText = 'margin:0;padding:0;white-space:pre-wrap;word-break:break-word;';
+  el.appendChild(pre);
+
+  // Build a flat char-by-char queue from the HTML
+  // Tags are inserted atomically — we never split a tag
+  const queue = buildQueue(htmlContent);
+  let idx = 0;
+  let cancelled = false;
+
+  _twCancel = () => { cancelled = true; };
+
+  function tick() {
+    if (cancelled) return;
+    if (idx >= queue.length) {
+      _twCancel = null;
+      if (onDone) onDone();
+      return;
+    }
+
+    // Insert next chunk
+    const chunk = queue[idx++];
+    pre.innerHTML += chunk;
+
+    // Auto-scroll to bottom
+    el.scrollTop = el.scrollHeight;
+
+    // Schedule next character
+    requestAnimationFrame(() => {
+      setTimeout(tick, charDelay);
+    });
+  }
+
+  tick();
+}
+
+/* ── Build a queue of atomic HTML chunks ─────────────────────────── */
+// Tags are atomic (one chunk), text chars are individual chunks
+function buildQueue(html) {
+  const chunks = [];
+  let i = 0;
+  while (i < html.length) {
+    if (html[i] === '<') {
+      // Find closing >
+      const end = html.indexOf('>', i);
+      if (end === -1) { chunks.push(html[i++]); continue; }
+      chunks.push(html.slice(i, end + 1));
+      i = end + 1;
+    } else if (html[i] === '&') {
+      // HTML entity — atomic
+      const end = html.indexOf(';', i);
+      if (end === -1) { chunks.push(html[i++]); continue; }
+      chunks.push(html.slice(i, end + 1));
+      i = end + 1;
+    } else {
+      chunks.push(html[i++]);
+    }
+  }
+  return chunks;
+}
+
+/* ── Wrap renderStep ─────────────────────────────────────────────── */
+const _t3Render = window.DEMO.renderStep;
+
+window.DEMO.renderStep = function(n) {
+  _t3Render(n);  // Task 3 (which calls Task 2)
+
+  const step = STEPS[n];
+  if (!step || !step.httpPreview) return;
+
+  // Update badge immediately
+  DOM.httpBadge.textContent = step.httpBadge || '—';
+  DOM.httpBadge.style.color = '';
+  DOM.httpBadge.style.borderColor = '';
+
+  // Convert \n escapes in the template-literal string to real newlines
+  const rawText   = step.httpPreview.replace(/\\n/g, '\n');
+  const highlight = syntaxHighlight(rawText);
+
+  // Speed → char delay: 1× = 14ms/char, 2× = 7ms, 0.5× = 28ms, 3× = 5ms
+  const speed     = parseFloat(DOM.speedSelect.value) || 1;
+  const charDelay = Math.round(14 / speed);
+
+  // Clear and start typewriter
+  DOM.httpContent.innerHTML = '';
+
+  // Add a small top-right badge showing the layer
+  const { LAYERS } = window.DEMO;
+  const layer = LAYERS[step.layer];
+  const badge = document.createElement('div');
+  badge.style.cssText = `position:sticky;top:0;float:right;font-size:10px;font-weight:700;
+    padding:2px 8px;border-radius:0 0 0 6px;background:${layer.bg};
+    color:${layer.color};border-bottom:1px solid ${layer.color}40;
+    border-left:1px solid ${layer.color}40;letter-spacing:.05em;`;
+  badge.textContent = layer.label.toUpperCase();
+  DOM.httpContent.appendChild(badge);
+
+  // Typewrite into a scroll div below the badge
+  const scrollDiv = document.createElement('div');
+  scrollDiv.style.cssText = 'padding:.875rem 1rem;';
+  DOM.httpContent.appendChild(scrollDiv);
+
+  typewrite(scrollDiv, highlight, charDelay, () => {
+    // onDone: signal Task 9 auto-play that typing is complete
+    if (window.DEMO.onTypingDone) window.DEMO.onTypingDone();
+  });
+};
+
+/* ── Expose for Task 9 ────────────────────────────────────────────── */
+window.DEMO.typewrite        = typewrite;
+window.DEMO.syntaxHighlight  = syntaxHighlight;
+
+console.log('TASK 4 complete ✓ — typewriter HTTP panel active');
+console.log('  syntaxHighlight(text) → HTML');
+console.log('  typewrite(el, html, delay, onDone)');
+console.log('  Task 5 will add JWT decoder + token field reveal');
+
+})(); // end Task 4 IIFE
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   TASKS 5 + 6 + 7 + 8 — Token Inspector · Centrepiece Moments ·
+                          Audit Log · IdP Toggle · Auto-play ·
+                          URL Hash · Polish
+   ═══════════════════════════════════════════════════════════════════ */
+(function() {
+
+const { DOM, STEPS, LAYERS, state, stopPlay } = window.DEMO;
+
+/* ─────────────────────────────────────────────────────────────────
+   TASK 5 — JWT decoder + token field-by-field reveal
+   ───────────────────────────────────────────────────────────────── */
+
+// Real base64url decode (works in all modern browsers)
+function b64urlDecode(s) {
+  s = s.replace(/-/g,'+').replace(/_/g,'/');
+  while (s.length % 4) s += '=';
+  try { return JSON.parse(atob(s)); } catch(e) { return null; }
+}
+
+// The real token response fields — each with annotation
+const TOKEN_FIELDS = [
+  { key: 'access_token',        val: 'eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0LWZoaXItc2VydmVyLWtleS0wMDEifQ.eyJzdWIiOiJkci5zbWl0aCIsImlzcyI6Imh0dHBzOi8vYXV0aC5kZW1vLmFqZmhpci5jb20iLCJhdWQiOiJodHRwczovL2ZoaXIuZGVtby5hamZoaXIuY29tL2ZoaXIiLCJleHAiOjE3NTM5MjAwMDAsImlhdCI6MTc1MzkxNjQwMCwic2NvcGUiOiJsYXVuY2ggb3BlbmlkIGZoaXJVc2VyIHBhdGllbnQvUGF0aWVudC5ycyBwYXRpZW50L0NvbmRpdGlvbi5ycyIsInBhdGllbnQiOiJlUGF0aWVudC04Njc1MzA5IiwiZW5jb3VudGVyIjoiZUVuYy0wMDEifQ.SIGNATURE',
+    ann: 'RS256 JWT · signed with server RSA private key', cls: '' },
+  { key: 'token_type',          val: '"Bearer"',        ann: 'OAuth2 standard', cls: '' },
+  { key: 'expires_in',          val: '3600',            ann: '1 hour TTL', cls: '' },
+  { key: 'scope',               val: '"launch openid fhirUser patient/Patient.rs patient/Condition.rs patient/Observation.rs"',
+    ann: 'granted scopes — fhirUser adds Practitioner claim to id_token · patient-level read+search', cls: '' },
+  { key: 'refresh_token',       val: 'eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0LWZoaXItc2VydmVyLWtleS0wMDEifQ...',
+    ann: 'rotation enforced — reuseRefreshTokens(false)', cls: '' },
+  { key: 'patient',             val: '"ePatient-8675309"',
+    ann: '★ TOP-LEVEL JSON — not buried in JWT', cls: 'important' },
+  { key: 'encounter',           val: '"eEnc-001"',
+    ann: '★ TOP-LEVEL JSON — most impls get this wrong', cls: 'important' },
+  { key: 'need_patient_banner', val: 'true',
+    ann: 'EHR UI hint — show patient header in app', cls: '' },
+  { key: 'id_token',            val: 'eyJhbGciOiJSUzI1NiIsImtpZCI6InNtYXJ0LWZoaXItc2VydmVyLWtleS0wMDEifQ.eyJzdWIiOiJkci5zbWl0aCIsIm5hbWUiOiJEci4gSmFuZSBTbWl0aCIsImZoaXJVc2VyIjoiUHJhY3RpdGlvbmVyL1ByYWN0aXRpb25lci1FWEFNUExFLTAwMSIsImlzcyI6Imh0dHBzOi8vYXV0aC5kZW1vLmFqZmhpci5jb20iLCJhdWQiOiJha2hlc3Rlci1zbWFydC1jbGllbnQiLCJleHAiOjE3NTM5MjAwMDAsImlhdCI6MTc1MzkxNjQwMH0.SIGNATURE',
+    ann: 'OIDC id_token — contains fhirUser claim (FHIR Practitioner URL for the clinician) · click to decode →', cls: 'expandable' },
+];
+
+// Decoded id_token payload shown on expand
+const ID_TOKEN_DECODED = {
+  header:  { alg: 'RS256', kid: 'smart-fhir-server-key-001' },
+  payload: {
+    sub:        'dr.smith',
+    name:       'Dr. Jane Smith',
+    fhirUser:  'Practitioner/Practitioner-EXAMPLE-001',
+    iss:       'https://auth.demo.ajfhir.com',
+    aud:       'akhester-smart-client',
+    exp:       1753920000,
+    iat:       1753916400,
+  }
+};
+
+let tokenExpanded = false;
+
+function renderTokenPanel(stepN) {
+  const step = STEPS[stepN];
+  if (!step) return;
+
+  if (step.tokenState === 'none') {
+    DOM.tokenContent.innerHTML = `<div class="idle-state">
+      <div class="idle-icon" style="font-size:24px;opacity:.3;">🔑</div>
+      <div style="color:#3D6A8A;">Token response — steps 12–18</div></div>`;
+    DOM.tokenBadge.textContent = '—';
+    tokenExpanded = false;
+    return;
+  }
+
+  if (step.tokenState === 'partial') {
+    DOM.tokenBadge.textContent = 'Issuing…';
+    DOM.tokenBadge.style.color = '#9A6700';
+    DOM.tokenContent.innerHTML = `<div style="padding:.875rem 1rem;">
+      <div style="font-size:11px;font-weight:700;color:#9A6700;margin-bottom:.75rem;
+        text-transform:uppercase;letter-spacing:.06em;">⏳ JWT being signed</div>
+      <div style="font-family:var(--font-mono);font-size:12px;line-height:1.8;color:#3D6A8A;">
+        <div><span style="color:var(--key);">alg</span>: RS256</div>
+        <div><span style="color:var(--key);">kid</span>: smart-fhir-server-key-001</div>
+        <div style="margin-top:.5rem;color:#3D6A8A;">SHA-256 signing…</div>
+        <div style="margin-top:.25rem;font-style:italic;color:#9A6700;">
+          SmartTokenCustomizer injecting patient context…</div>
+      </div></div>`;
+    return;
+  }
+
+  // Full token — render field by field
+  DOM.tokenBadge.textContent = 'Token received ✓';
+  DOM.tokenBadge.style.color = '#0A6058';
+  DOM.tokenBadge.style.borderColor = 'rgba(10,96,88,.3)';
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'padding:.75rem 1rem;font-family:var(--font-mono);font-size:12px;';
+
+  // Callout banner
+  const banner = document.createElement('div');
+  banner.style.cssText = `margin-bottom:.75rem;padding:.5rem .75rem;border-radius:6px;
+    background:rgba(13,122,110,.08);border:1px solid rgba(13,122,110,.25);
+    font-size:11px;color:#0A6058;font-family:var(--font-sans);line-height:1.5;`;
+  banner.innerHTML = `<strong>SMART App Launch v2.2</strong> — <code>patient</code>,
+    <code>encounter</code>, and <code>need_patient_banner</code> are
+    <strong>top-level JSON fields</strong>, not JWT claims.<br>
+    <span style="color:#3D6A8A;">Most implementations bury them inside the JWT payload — that violates the spec.</span>`;
+  wrap.appendChild(banner);
+
+  // Fields
+  TOKEN_FIELDS.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:baseline;gap:.5rem;padding:4px 0;
+      border-bottom:1px solid rgba(184,212,232,.12);flex-wrap:wrap;`;
+
+    const isJwt = f.val.startsWith('eyJ');
+    const displayVal = isJwt ? `"${f.val.slice(0,18)}…"` : f.val;
+
+    let keyStyle = 'color:var(--key);font-weight:600;min-width:140px;flex-shrink:0;';
+    if (f.cls === 'important') keyStyle += 'color:#0D7A6E;';
+
+    row.innerHTML = `<span style="${keyStyle}">"${f.key}"</span>
+      <span style="color:#3D6A8A;">:</span>
+      <span style="color:${f.val.startsWith('"') ? 'var(--str)' : f.val === 'true' ? '#8250DF' : 'var(--val)'};
+        word-break:break-all;flex:1;">${displayVal}</span>`;
+
+    // Annotation badge
+    if (f.ann) {
+      const ann = document.createElement('span');
+      ann.style.cssText = `font-size:10px;font-family:var(--font-sans);white-space:nowrap;
+        padding:1px 7px;border-radius:4px;margin-left:auto;flex-shrink:0;cursor:default;`;
+      if (f.cls === 'important') {
+        ann.style.cssText += 'background:rgba(13,122,110,.12);color:#0A6058;border:1px solid rgba(13,122,110,.3);font-weight:700;';
+      } else if (f.cls === 'expandable') {
+        ann.style.cssText += 'background:rgba(27,79,138,.1);color:#1B4F8A;border:1px solid rgba(27,79,138,.25);cursor:pointer;';
+        ann.addEventListener('click', toggleIdToken);
+      } else {
+        ann.style.cssText += 'background:rgba(90,138,168,.1);color:#3D6A8A;border:1px solid rgba(90,138,168,.2);';
+      }
+      ann.textContent = f.ann;
+      row.appendChild(ann);
+    }
+
+    wrap.appendChild(row);
+
+    // id_token expander slot
+    if (f.key === 'id_token') {
+      const expander = document.createElement('div');
+      expander.id = 'id-token-expander';
+      expander.style.cssText = 'overflow:hidden;max-height:0;transition:max-height .3s ease;';
+      wrap.appendChild(expander);
+    }
+  });
+
+  DOM.tokenContent.innerHTML = '';
+  DOM.tokenContent.appendChild(wrap);
+}
+
+function toggleIdToken() {
+  const exp = document.getElementById('id-token-expander');
+  if (!exp) return;
+  tokenExpanded = !tokenExpanded;
+  if (tokenExpanded) {
+    exp.style.maxHeight = '300px';
+    exp.innerHTML = `<div style="margin:.5rem 0;padding:.75rem;background:var(--surface3);
+      border-radius:8px;border:1px solid var(--border);font-size:11px;">
+      <div style="color:#1B4F8A;font-weight:700;margin-bottom:.5rem;font-family:var(--font-sans);">
+        id_token decoded (RS256)
+      </div>
+      <div style="color:#3D6A8A;margin-bottom:.25rem;">Header</div>
+      <pre style="margin:0;color:var(--text-muted);">${JSON.stringify(ID_TOKEN_DECODED.header, null, 2)
+        .replace(/"([^"]+)":/g, '<span style="color:var(--key)">"$1"</span>:')
+        .replace(/: "([^"]+)"/g, ': <span style="color:var(--str)">"$1"</span>')}</pre>
+      <div style="color:#3D6A8A;margin:.5rem 0 .25rem;">Payload</div>
+      <pre style="margin:0;color:var(--text-muted);">${JSON.stringify(ID_TOKEN_DECODED.payload, null, 2)
+        .replace(/"([^"]+)":/g, (_, k) => {
+          const special = ['fhirUser','sub','name'].includes(k);
+          return `<span style="color:${special ? '#0D7A6E' : 'var(--key)'};${special ? 'font-weight:700' : ''}">"${k}"</span>:`;
+        })
+        .replace(/: "([^"]+)"/g, ': <span style="color:var(--str)">"$1"</span>')}</pre>
+      <div style="margin-top:.5rem;font-family:var(--font-sans);font-size:10px;color:#0D7A6E;">
+        ✓ fhirUser claim → Practitioner FHIR resource reference<br>
+        ✓ Verified by IdTokenValidator: RS256, iss, aud, exp, nonce
+      </div>
+    </div>`;
+  } else {
+    exp.style.maxHeight = '0';
+    exp.innerHTML = '';
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   TASK 6 — Three centrepiece moments
+   Steps 6 (PKCE), 13 (token exchange), 15 (token response)
+   ───────────────────────────────────────────────────────────────── */
+
+function renderCentrepiece(stepN) {
+  const step = STEPS[stepN];
+  if (!step || !step.isCentrepiece) return;
+
+  const flowPanel = document.getElementById('panel-flow');
+  let overlay = document.getElementById('centrepiece-overlay');
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'centrepiece-overlay';
+    overlay.style.cssText = `position:absolute;inset:0;background:rgba(248,250,252,.98);
+      border-radius:0;z-index:20;overflow:auto;padding:1.5rem;
+      display:flex;flex-direction:column;gap:1rem;`;
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '× Back to diagram';
+    closeBtn.style.cssText = `align-self:flex-start;background:none;border:1px solid var(--border-mid);
+      border-radius:6px;padding:4px 12px;font-size:12px;color:#3D6A8A;cursor:pointer;
+      font-family:var(--font-sans);`;
+    closeBtn.onclick = () => { overlay.style.display = 'none'; };
+    overlay.appendChild(closeBtn);
+    const content = document.createElement('div');
+    content.id = 'centrepiece-content';
+    overlay.appendChild(content);
+    flowPanel.appendChild(overlay);
+  }
+
+  overlay.style.display = 'flex';
+  const content = document.getElementById('centrepiece-content');
+
+  // Step 6: PKCE visual computation
+  if (stepN === 6) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#9A6700;text-transform:uppercase;
+        letter-spacing:.07em;">⚡ PKCE S256 — RFC 7636</div>
+      <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-sans);line-height:1.6;
+        background:rgba(154,103,0,.06);border:1px solid rgba(154,103,0,.2);border-radius:8px;padding:.75rem;">
+        <strong>Why PKCE?</strong> Without PKCE, a malicious app on the same device can steal the
+        authorization code from the redirect URI and exchange it for a token.
+        PKCE binds the code to the original client by requiring proof of the verifier.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.75rem;font-family:var(--font-mono);font-size:12px;">
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#9A6700;font-weight:700;margin-bottom:.375rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Step 1 — Generate verifier</div>
+          <div style="color:#3D6A8A;">byte[] bytes = new byte[<span style="color:#116329;">96</span>]; <span style="color:#3D6A8A;font-style:italic;">// 768-bit entropy</span></div>
+          <div style="color:#3D6A8A;">new SecureRandom().nextBytes(bytes);</div>
+          <div style="color:#3D6A8A;">codeVerifier = Base64.getUrlEncoder().<span style="color:#1B4F8A;">withoutPadding()</span>.encodeToString(bytes);</div>
+          <div style="margin-top:.5rem;padding:.375rem .625rem;background:rgba(27,79,138,.06);border-radius:4px;border-left:2px solid #1B4F8A;">
+            <span style="color:#3D6A8A;">→ </span><span style="color:#1B4F8A;">"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk…"</span>
+            <span style="color:#8AB0C8;font-size:10px;"> (128 chars)</span>
+          </div>
+          <div style="margin-top:.375rem;font-size:10px;color:#9A6700;">⚡ Spec minimum: 32 bytes. We use <strong>96 bytes (3× minimum)</strong> for additional entropy.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;padding:0 .5rem;">
+          <div style="flex:1;height:1px;background:var(--border);"></div>
+          <div style="font-size:18px;color:#9A6700;">↓ SHA-256</div>
+          <div style="flex:1;height:1px;background:var(--border);"></div>
+        </div>
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#9A6700;font-weight:700;margin-bottom:.375rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Step 2 — Compute challenge</div>
+          <div style="color:#3D6A8A;">byte[] digest = MessageDigest.getInstance(<span style="color:var(--str);">"SHA-256"</span>)</div>
+          <div style="color:#3D6A8A;">    .digest(codeVerifier.getBytes(StandardCharsets.<span style="color:#1B4F8A;">US_ASCII</span>));</div>
+          <div style="color:#3D6A8A;">codeChallenge = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);</div>
+          <div style="margin-top:.5rem;padding:.375rem .625rem;background:rgba(13,122,110,.06);border-radius:4px;border-left:2px solid #0D7A6E;">
+            <span style="color:#3D6A8A;">→ </span><span style="color:#0A6058;">"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"</span>
+            <span style="color:#8AB0C8;font-size:10px;"> (43 chars)</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:.75rem;">
+          <div style="flex:1;background:rgba(27,79,138,.06);border-radius:8px;padding:.75rem;border:1px solid rgba(27,79,138,.15);">
+            <div style="font-size:10px;font-weight:700;color:#1B4F8A;margin-bottom:.375rem;">Sent to Auth Server</div>
+            <div style="color:#3D6A8A;">code_challenge = "E9Melh…"</div>
+            <div style="color:#3D6A8A;">code_challenge_method = S256</div>
+          </div>
+          <div style="flex:1;background:rgba(13,122,110,.06);border-radius:8px;padding:.75rem;border:1px solid rgba(13,122,110,.15);">
+            <div style="font-size:10px;font-weight:700;color:#0D7A6E;margin-bottom:.375rem;">Kept in browser only</div>
+            <div style="color:#3D6A8A;">code_verifier = "dBjft…"</div>
+            <div style="color:#3D6A8A;">Sent only at token exchange</div>
+          </div>
+        </div>
+      </div>`;
+
+  // Step 13: token exchange verification
+  } else if (stepN === 13) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#1B4F8A;text-transform:uppercase;
+        letter-spacing:.07em;">🔑 PKCE Token Exchange — Verification</div>
+      <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-sans);line-height:1.6;
+        background:rgba(27,79,138,.06);border:1px solid rgba(27,79,138,.2);border-radius:8px;padding:.75rem;">
+        The SMART Client sends the original <code>code_verifier</code> to the Auth Server.
+        The server recomputes <code>SHA-256(verifier)</code> and checks it matches the
+        <code>code_challenge</code> sent during the authorize request.
+        A stolen authorization code is useless without the verifier.
+      </div>
+      <div style="font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:.75rem;">
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#1B4F8A;font-weight:700;margin-bottom:.5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">POST /oauth2/token</div>
+          <div><span style="color:var(--key);">code</span>          = <span style="color:var(--str);">"SplxlOBeZQQYbYS6WxSbIA"</span></div>
+          <div><span style="color:var(--key);">code_verifier</span> = <span style="color:var(--str);">"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;padding:0 .5rem;">
+          <div style="flex:1;height:1px;background:var(--border);"></div>
+          <div style="font-size:14px;color:#1B4F8A;">Auth Server verifies</div>
+          <div style="flex:1;height:1px;background:var(--border);"></div>
+        </div>
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div><span style="color:#3D6A8A;">expected = </span><span style="color:#9A6700;">"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"</span></div>
+          <div style="margin:.375rem 0;"><span style="color:#3D6A8A;">computed = SHA-256(</span><span style="color:var(--str);">"dBjftJeZ…"</span><span style="color:#3D6A8A;">) =</span></div>
+          <div style="padding:.375rem .625rem;background:rgba(17,99,41,.08);border-radius:4px;border-left:2px solid #116329;">
+            <span style="color:#116329;font-weight:700;font-size:13px;">✓ MATCH — code injection attack prevented</span>
+          </div>
+        </div>
+      </div>`;
+
+  // Step 15: token response field callout
+  } else if (stepN === 14) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#0D7A6E;text-transform:uppercase;
+        letter-spacing:.07em;">★ SMART Token Response — What Most Implementations Get Wrong</div>
+      <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-sans);line-height:1.6;">
+        SMART App Launch v2.2 §7.1 requires <code>patient</code>, <code>encounter</code>,
+        and <code>need_patient_banner</code> as <strong>top-level JSON fields</strong>
+        in the token response body — not as claims inside the JWT.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-family:var(--font-mono);font-size:11px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--err);margin-bottom:.375rem;font-family:var(--font-sans);text-transform:uppercase;letter-spacing:.06em;">✗ Most implementations (wrong)</div>
+          <div style="background:rgba(207,34,46,.04);border:1px solid rgba(207,34,46,.2);border-radius:8px;padding:.75rem;">
+            <div style="color:#3D6A8A;">{</div>
+            <div style="padding-left:1rem;"><span style="color:var(--key);">"access_token"</span>: <span style="color:var(--str);">"eyJ…"</span>,</div>
+            <div style="padding-left:1rem;"><span style="color:var(--key);">"token_type"</span>: <span style="color:var(--str);">"Bearer"</span></div>
+            <div style="color:#3D6A8A;">}</div>
+            <div style="margin-top:.5rem;font-size:10px;color:var(--err);font-family:var(--font-sans);">
+              patient buried inside JWT — client must decode JWT to get context</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#0D7A6E;margin-bottom:.375rem;font-family:var(--font-sans);text-transform:uppercase;letter-spacing:.06em;">✓ AJ FHIR Platform (correct)</div>
+          <div style="background:rgba(13,122,110,.06);border:1px solid rgba(13,122,110,.25);border-radius:8px;padding:.75rem;">
+            <div style="color:#3D6A8A;">{</div>
+            <div style="padding-left:1rem;"><span style="color:var(--key);">"access_token"</span>: <span style="color:var(--str);">"eyJ…"</span>,</div>
+            <div style="padding-left:1rem;"><span style="color:var(--key);">"token_type"</span>: <span style="color:var(--str);">"Bearer"</span>,</div>
+            <div style="padding-left:1rem;background:rgba(13,122,110,.08);border-radius:3px;"><span style="color:#0D7A6E;font-weight:700;">"patient"</span>: <span style="color:#0A6058;">"ePatient-8675309"</span>,</div>
+            <div style="padding-left:1rem;background:rgba(13,122,110,.08);border-radius:3px;"><span style="color:#0D7A6E;font-weight:700;">"encounter"</span>: <span style="color:#0A6058;">"eEnc-001"</span>,</div>
+            <div style="padding-left:1rem;"><span style="color:var(--key);">"need_patient_banner"</span>: <span style="color:#8250DF;">true</span></div>
+            <div style="color:#3D6A8A;">}</div>
+            <div style="margin-top:.5rem;font-size:10px;color:#0D7A6E;font-family:var(--font-sans);">
+              SmartTokenResponseConverter — top-level per spec §7.1 ✓</div>
+          </div>
+        </div>
+      </div>`;
+  } else if (stepN === 15) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#0D7A6E;text-transform:uppercase;
+        letter-spacing:.07em;">🛡 Scope Enforcement — SmartScopeInterceptor</div>
+      <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-sans);line-height:1.6;
+        background:rgba(13,122,110,.06);border:1px solid rgba(13,122,110,.2);border-radius:8px;padding:.75rem;">
+        Every FHIR request passes through <code>SmartScopeInterceptor</code> before HAPI JPA
+        touches any data. The interceptor verifies the RS256 JWT signature, extracts the
+        <code>scope</code> claim, and checks the requested resource against granted scopes.
+        If the scope does not cover the resource — the request is blocked before the database
+        is ever queried.
+      </div>
+      <div style="font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:.75rem;">
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#0D7A6E;font-weight:700;margin-bottom:.5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Request arrives at HAPI :8080</div>
+          <div><span style="color:var(--key);">GET</span> <span style="color:#0D7A6E;">/fhir/Patient/ePatient-8675309</span></div>
+          <div><span style="color:#3D6A8A;">Authorization: Bearer </span><span style="color:var(--str);">eyJhbGciOiJSUzI1NiI…</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+          <div style="background:rgba(17,99,41,.06);border-radius:8px;padding:.875rem;border:1px solid rgba(17,99,41,.2);">
+            <div style="font-size:10px;font-weight:700;color:#116329;margin-bottom:.5rem;font-family:var(--font-sans);text-transform:uppercase;letter-spacing:.06em;">✓ PASS — Patient.rs granted</div>
+            <div><span style="color:#3D6A8A;">scope: </span><span style="color:var(--str);">"patient/Patient.rs"</span></div>
+            <div style="margin-top:.375rem;"><span style="color:#3D6A8A;">resource: </span><span style="color:#116329;">Patient</span></div>
+            <div><span style="color:#3D6A8A;">method:   </span><span style="color:#116329;">GET → .rs (read+search)</span></div>
+            <div style="margin-top:.5rem;font-size:11px;color:#116329;font-weight:700;">→ HAPI JPA executes query</div>
+          </div>
+          <div style="background:rgba(207,34,46,.04);border-radius:8px;padding:.875rem;border:1px solid rgba(207,34,46,.2);">
+            <div style="font-size:10px;font-weight:700;color:var(--err);margin-bottom:.5rem;font-family:var(--font-sans);text-transform:uppercase;letter-spacing:.06em;">✗ BLOCK — MedRequest not granted</div>
+            <div><span style="color:#3D6A8A;">scope: </span><span style="color:var(--str);">"patient/Patient.rs"</span></div>
+            <div style="margin-top:.375rem;"><span style="color:#3D6A8A;">resource: </span><span style="color:var(--err);">MedicationRequest</span></div>
+            <div><span style="color:#3D6A8A;">method:   </span><span style="color:var(--err);">GET — not in scope</span></div>
+            <div style="margin-top:.5rem;font-size:11px;color:var(--err);font-weight:700;">→ 403 Forbidden — DB never queried</div>
+          </div>
+        </div>
+        <div style="background:rgba(27,79,138,.06);border-radius:8px;padding:.75rem;border:1px solid rgba(27,79,138,.15);font-family:var(--font-sans);font-size:11px;color:#1B4F8A;line-height:1.6;">
+          <strong>SmartScopeInterceptor fires BEFORE HAPI JPA.</strong>
+          The database is never queried for blocked requests.
+          RS256 signature verified via <code>RemoteJWKSet</code> (cached JWKS).
+          Scope format: <code>patient/{ResourceType}.{ops}</code> — or <code>user/{ResourceType}.{ops}</code> for user-level access. <code>.rs</code> = read+search, <code>.c</code> = create.
+        </div>
+      </div>`;
+  }
+
+  // Step 19 (index 19): Consent Manager — FHIR Consent resource structure
+  if (stepN === 19) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#0A5A50;text-transform:uppercase;letter-spacing:.07em;">🔐 FHIR Consent — Regulatory mapping</div>
+      <div style="font-size:12px;color:var(--text-muted);background:rgba(10,90,80,.06);border:1px solid rgba(10,90,80,.2);border-radius:8px;padding:.75rem;line-height:1.6;">
+        <strong>ConsentEnforcementInterceptor</strong> checks this FHIR Consent resource before every FHIR data access.
+        The <code>provision</code> object maps directly to regulatory requirements.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-family:var(--font-mono);font-size:11px;">
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#0A5A50;font-weight:700;margin-bottom:.5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">FHIR Consent fields</div>
+          <div><span style="color:var(--key);">status</span>: <span style="color:var(--str);">"active"</span></div>
+          <div><span style="color:var(--key);">provision.type</span>: <span style="color:var(--str);">"permit"</span></div>
+          <div><span style="color:var(--key);">provision.period</span>: <span style="color:var(--str);">2024–2025</span></div>
+          <div><span style="color:var(--key);">provision.class</span>: <span style="color:var(--str);">[Observation, Patient]</span></div>
+          <div><span style="color:var(--key);">performer</span>: <span style="color:var(--str);">Patient/ePatient-8675309</span></div>
+        </div>
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#0A5A50;font-weight:700;margin-bottom:.5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Regulatory mapping</div>
+          <div><span style="color:#0A5A50;">provision.period</span> → GDPR Art.17 right to erasure</div>
+          <div><span style="color:#0A5A50;">provision.class</span> → HIPAA minimum necessary</div>
+          <div><span style="color:#0A5A50;">performer</span> → DISHA patient identity binding</div>
+          <div><span style="color:#0A5A50;">provision.type=permit</span> → AU My Health Record</div>
+          <div><span style="color:#0A5A50;">status=active</span> → TEFCA consent directive</div>
+        </div>
+      </div>`;
+  }
+
+  // Step 24 (index 24): Lab — ServiceRequest → Observation → DiagnosticReport chain
+  if (stepN === 24) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#854D0E;text-transform:uppercase;letter-spacing:.07em;">🧪 Lab results — FHIR resource chain</div>
+      <div style="font-size:12px;color:var(--text-muted);background:rgba(133,77,14,.06);border:1px solid rgba(133,77,14,.2);border-radius:8px;padding:.75rem;line-height:1.6;">
+        The lab workflow uses three connected FHIR resources. <code>DiagnosticReport.basedOn</code> links the report back to the original order.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.625rem;font-family:var(--font-mono);font-size:11px;">
+        <div style="background:var(--surface3);border-radius:8px;padding:.75rem;border:1px solid var(--border);display:flex;align-items:center;gap:.75rem;">
+          <div style="font-weight:700;color:#854D0E;min-width:120px;">ServiceRequest</div>
+          <div style="color:var(--text-muted);">Order placed by Dr. Priya · LOINC 58410-2 CBC · intent=order</div>
+        </div>
+        <div style="text-align:center;color:#854D0E;font-size:14px;">↓ lab fulfils order</div>
+        <div style="background:var(--surface3);border-radius:8px;padding:.75rem;border:1px solid var(--border);">
+          <div style="font-weight:700;color:#854D0E;margin-bottom:.375rem;">3× Observation results</div>
+          <div><span style="color:var(--key);">Hb</span>  13.2 g/dL · LOINC 718-7 · <span style="color:#116329;">Normal</span></div>
+          <div><span style="color:var(--key);">WBC</span>  7.4×10⁹/L · LOINC 6690-2 · <span style="color:#116329;">Normal</span></div>
+          <div><span style="color:var(--key);">LDL</span>  4.1 mmol/L · LOINC 2089-1 · <span style="color:var(--err);">High ↑</span></div>
+        </div>
+        <div style="text-align:center;color:#854D0E;font-size:14px;">↓ DiagnosticReport.result references all 3</div>
+        <div style="background:var(--surface3);border-radius:8px;padding:.75rem;border:1px solid var(--border);">
+          <div style="font-weight:700;color:#854D0E;margin-bottom:.375rem;">DiagnosticReport</div>
+          <div><span style="color:var(--key);">basedOn</span>: ServiceRequest/sr-lab-001 <span style="color:#116329;">← links to order</span></div>
+          <div><span style="color:var(--key);">conclusion</span>: "CBC normal. LDL elevated: 4.1 mmol/L"</div>
+        </div>
+      </div>`;
+  }
+
+  // Step 27 (index 27): DICOM / ImagingStudy structure
+  if (stepN === 27) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#534AB7;text-transform:uppercase;letter-spacing:.07em;">📷 DICOM · ImagingStudy — FHIR wraps DICOM</div>
+      <div style="font-size:12px;color:var(--text-muted);background:rgba(83,74,183,.06);border:1px solid rgba(83,74,183,.2);border-radius:8px;padding:.75rem;line-height:1.6;">
+        <strong>FHIR does not replace DICOM.</strong> ImagingStudy wraps DICOM metadata and provides a WADO-RS endpoint. Pixel data lives in the PACS server — accessed directly via DICOMweb, not through FHIR.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-family:var(--font-mono);font-size:11px;">
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#534AB7;font-weight:700;margin-bottom:.5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">ImagingStudy (FHIR)</div>
+          <div><span style="color:var(--key);">modality</span>: <span style="color:var(--str);">DX (digital X-ray)</span></div>
+          <div><span style="color:var(--key);">numberOfInstances</span>: <span style="color:#116329;">2</span></div>
+          <div><span style="color:var(--key);">endpoint.address</span>:</div>
+          <div style="color:var(--str);font-size:10px;word-break:break-all;">https://pacs.hospital.lk/wado-rs/studies/1.2.840...</div>
+          <div style="margin-top:.375rem;"><span style="color:var(--key);">series[0].modality</span>: <span style="color:var(--str);">DX</span></div>
+        </div>
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#534AB7;font-weight:700;margin-bottom:.5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Two-step access</div>
+          <div style="margin-bottom:.5rem;"><span style="color:#534AB7;">Step 1 (FHIR):</span></div>
+          <div style="color:var(--text-muted);">GET /fhir/ImagingStudy?patient=P8675309</div>
+          <div style="color:var(--text-muted);font-size:10px;">→ scope patient/ImagingStudy.rs checked</div>
+          <div style="margin:.5rem 0;"><span style="color:#534AB7;">Step 2 (DICOMweb):</span></div>
+          <div style="color:var(--text-muted);">GET wado-rs/studies/1.2.840...</div>
+          <div style="color:var(--text-muted);font-size:10px;">→ direct PACS call, not mediated by FHIR</div>
+        </div>
+      </div>`;
+  }
+
+  // Step 30 (index 30): Referral — ServiceRequest + Task resource pair
+  if (stepN === 30) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#0D7A6E;text-transform:uppercase;letter-spacing:.07em;">📋 Referral · ServiceRequest + Task</div>
+      <div style="font-size:12px;color:var(--text-muted);background:rgba(13,122,110,.06);border:1px solid rgba(13,122,110,.2);border-radius:8px;padding:.75rem;line-height:1.6;">
+        FHIR uses two resources for referrals. <strong>ServiceRequest</strong> is the clinical order. <strong>Task</strong> tracks the workflow state from requested → accepted → completed.
+        Cross-facility dispatch checks the Consent Manager first.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-family:var(--font-mono);font-size:11px;">
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#0D7A6E;font-weight:700;margin-bottom:.5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">ServiceRequest (order)</div>
+          <div><span style="color:var(--key);">intent</span>: <span style="color:var(--str);">"referral"</span></div>
+          <div><span style="color:var(--key);">code</span>: <span style="color:var(--str);">306206005 (Cardiology)</span></div>
+          <div><span style="color:var(--key);">performer</span>: <span style="color:var(--str);">Central Hospital</span></div>
+          <div><span style="color:var(--key);">reasonReference</span>: <span style="color:var(--str);">Condition/angina</span></div>
+        </div>
+        <div style="background:var(--surface3);border-radius:8px;padding:.875rem;border:1px solid var(--border);">
+          <div style="color:#0D7A6E;font-weight:700;margin-bottom:.5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Task (workflow)</div>
+          <div><span style="color:var(--key);">status</span>: requested → accepted → completed</div>
+          <div><span style="color:var(--key);">focus</span>: <span style="color:var(--str);">ServiceRequest/sr-referral</span></div>
+          <div><span style="color:var(--key);">owner</span>: <span style="color:var(--str);">Central Hospital</span></div>
+          <div style="margin-top:.375rem;color:#0A5A50;">+ Consent cross-facility check ✓</div>
+        </div>
+      </div>`;
+  }
+
+  // Step 33 (index 33): Full audit trail
+  if (stepN === 33) {
+    content.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#854D0E;text-transform:uppercase;letter-spacing:.07em;">📊 IHE ATNA audit trail — 7 events</div>
+      <div style="font-size:12px;color:var(--text-muted);background:rgba(133,77,14,.06);border:1px solid rgba(133,77,14,.2);border-radius:8px;padding:.75rem;line-height:1.6;">
+        Every access in this patient encounter is logged as a FHIR AuditEvent. Non-repudiation. GDPR Article 30, HIPAA §164.312, IHE ATNA, DISHA, and Sri Lanka Blueprint §6.2.9 compliant.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.375rem;font-family:var(--font-mono);font-size:11px;">
+        ${[
+          {n:1, type:'Authentication',      agent:'dr.smith',   res:'System',               color:'#1B4F8A', step:9},
+          {n:2, type:'Token issued',         agent:'dr.smith',   res:'CardioApp',             color:'#0D7A6E', step:14},
+          {n:3, type:'FHIR Patient read',    agent:'dr.smith',   res:'Patient/ePatient-8675309', color:'#0D7A6E', step:17},
+          {n:4, type:'Consent granted',      agent:'dr.smith',   res:'Consent/consent-P',     color:'#0A5A50', step:22},
+          {n:5, type:'Lab result read',      agent:'dr.smith',   res:'DiagnosticReport/lab',  color:'#854D0E', step:26},
+          {n:6, type:'ImagingStudy access',  agent:'dr.smith',   res:'ImagingStudy/cxr',      color:'#534AB7', step:29},
+          {n:7, type:'Referral created',     agent:'dr.smith',   res:'Task/referral-001',     color:'#0D7A6E', step:33},
+        ].map(e => \`<div style="display:flex;align-items:center;gap:.5rem;padding:.375rem .625rem;background:rgba(\${e.color==='#1B4F8A'?'27,79,138':e.color==='#0D7A6E'?'13,122,110':e.color==='#0A5A50'?'10,90,80':e.color==='#854D0E'?'133,77,14':e.color==='#534AB7'?'83,74,183':'13,122,110'},.06);border-radius:5px;border:1px solid rgba(\${e.color==='#1B4F8A'?'27,79,138':e.color==='#0D7A6E'?'13,122,110':e.color==='#0A5A50'?'10,90,80':e.color==='#854D0E'?'133,77,14':e.color==='#534AB7'?'83,74,183':'13,122,110'},.2);">
+          <span style="color:\${e.color};font-weight:700;min-width:18px;">\${e.n}</span>
+          <span style="color:\${e.color};font-weight:600;min-width:140px;">\${e.type}</span>
+          <span style="color:var(--text-muted);">\${e.agent} → \${e.res}</span>
+          <span style="color:var(--text-dim);margin-left:auto;">step \${e.step}</span>
+        </div>\`).join('')}
+      </div>`;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   TASK 7 — Audit log accumulation
+   ───────────────────────────────────────────────────────────────── */
+
+let auditEventCount = 0;
+
+const AUDIT_EVENTS = [
+  { step: 9,  type: 'Authentication',      agent: 'dr.smith',      resource: 'System',                           outcome: '0', color: '#1B4F8A' },
+  { step: 14, type: 'Token issued',         agent: 'dr.smith',      resource: 'akhester-smart-client',            outcome: '0', color: '#0D7A6E' },
+  { step: 17, type: 'FHIR Patient read',    agent: 'dr.smith',      resource: 'Patient/ePatient-8675309',         outcome: '0', color: '#0D7A6E' },
+  { step: 22, type: 'Consent granted',      agent: 'dr.smith',      resource: 'Consent/consent-P8675309-cardio',  outcome: '0', color: '#0A5A50' },
+  { step: 27, type: 'Lab result read',      agent: 'dr.smith',      resource: 'DiagnosticReport/dr-lab-001',      outcome: '0', color: '#854D0E' },
+  { step: 30, type: 'ImagingStudy access',  agent: 'dr.smith',      resource: 'ImagingStudy/study-cxr-001',       outcome: '0', color: '#534AB7' },
+  { step: 33, type: 'Referral created',     agent: 'dr.smith',      resource: 'Task/task-referral-001',           outcome: '0', color: '#0D7A6E' },
+];
+
+function renderAuditPanel(stepN) {
+  const eventsForStep = AUDIT_EVENTS.filter(e => e.step <= stepN);
+
+  if (eventsForStep.length === 0) {
+    DOM.auditContent.innerHTML = `<div class="idle-state">
+      <div class="idle-icon" style="font-size:24px;opacity:.3;">📋</div>
+      <div style="color:#3D6A8A;">Audit events accumulate here</div>
+      <div style="color:#3D6A8A;font-size:11px;margin-top:.25rem;">Step 9 onwards · IHE ATNA · HIPAA</div></div>`;
+    DOM.auditBadge.textContent = '0 events';
+    DOM.auditBadge.style.color = '#3D6A8A';
+    return;
+  }
+
+  DOM.auditBadge.textContent = `${eventsForStep.length} event${eventsForStep.length > 1 ? 's' : ''}`;
+  DOM.auditBadge.style.color = '#D8F2EE';  /* white-ish on teal header */
+    DOM.auditBadge.style.background = '#0A5A50';
+    DOM.auditBadge.style.borderColor = '#084840';
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'padding:.75rem;display:flex;flex-direction:column;gap:.5rem;';
+
+  eventsForStep.forEach(ev => {
+    const ts = new Date(1753916400000 + ev.step * 30000).toISOString().slice(11, 23);
+    const card = document.createElement('div');
+    card.style.cssText = `border-radius:7px;border:1px solid ${ev.color}50;
+      background:${ev.color}12;padding:.625rem .75rem;font-size:12px;font-family:var(--font-mono);`;
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+        <span style="color:${ev.color};font-weight:700;font-family:var(--font-sans);font-size:12px;">${ev.type}</span>
+        <span style="color:#2C5070;font-size:11px;font-family:var(--font-sans);">${ts}Z</span>
+      </div>
+      <div style="margin-top:4px;line-height:1.6;"><span style="color:#2C5070;">agent: </span><span style="color:var(--str);">"${ev.agent}"</span></div>
+      <div><span style="color:#2C5070;">entity: </span><span style="color:var(--str);">"${ev.resource}"</span></div>
+      <div><span style="color:#2C5070;">outcome: </span><span style="color:#116329;font-weight:700;">${ev.outcome === '0' ? '0 (success)' : ev.outcome}</span></div>`;
+    wrap.appendChild(card);
+  });
+
+  // Step 17: show full AuditEvent JSON
+  if (stepN === 17) {
+    const full = document.createElement('div');
+    full.style.cssText = `margin-top:.25rem;padding:.75rem;background:var(--surface3);
+      border-radius:8px;border:1px solid var(--border);font-family:var(--font-mono);font-size:10px;
+      color:var(--text-muted);line-height:1.7;`;
+    full.innerHTML = `<div style="color:#9A6700;font-weight:700;font-family:var(--font-sans);
+        font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;">
+        Full FHIR AuditEvent · IHE ATNA compliant</div>
+      <span style="color:var(--key);">"resourceType"</span>: <span style="color:var(--str);">"AuditEvent"</span>,<br>
+      <span style="color:var(--key);">"type"</span>: { <span style="color:var(--key);">"code"</span>: <span style="color:var(--str);">"110112"</span>, <span style="color:var(--key);">"display"</span>: <span style="color:var(--str);">"Query"</span> },<br>
+      <span style="color:var(--key);">"action"</span>: <span style="color:var(--str);">"R"</span>,<br>
+      <span style="color:var(--key);">"recorded"</span>: <span style="color:var(--str);">"2025-01-15T10:30:42.123Z"</span>,<br>
+      <span style="color:var(--key);">"outcome"</span>: <span style="color:#116329;font-weight:700;">"0"</span>,<br>
+      <span style="color:var(--key);">"agent"</span>: [{ <span style="color:var(--key);">"who"</span>: { <span style="color:var(--key);">"reference"</span>: <span style="color:#0D7A6E;font-weight:700;">"Practitioner/Practitioner-EXAMPLE-001"</span> },<br>
+      &nbsp;&nbsp;<span style="color:var(--key);">"name"</span>: <span style="color:var(--str);">"Dr. Jane Smith"</span>, <span style="color:var(--key);">"requestor"</span>: <span style="color:#8250DF;">true</span> }],<br>
+      <span style="color:var(--key);">"entity"</span>: [{ <span style="color:var(--key);">"what"</span>: { <span style="color:var(--key);">"reference"</span>: <span style="color:#0D7A6E;font-weight:700;">"Patient/ePatient-8675309"</span> } }]`;
+    wrap.appendChild(full);
+  }
+
+  DOM.auditContent.innerHTML = '';
+  DOM.auditContent.appendChild(wrap);
+  DOM.auditContent.scrollTop = DOM.auditContent.scrollHeight;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   TASK 8 — IdP federation toggle + auto-play + URL hash + polish
+   ───────────────────────────────────────────────────────────────── */
+
+// ── IdP toggle ────────────────────────────────────────────────────
+let idpMode = false;
+
+function buildIdpToggle() {
+  const right = document.querySelector('.tb-right');
+  if (!right) return;
+  const toggle = document.createElement('div');
+  toggle.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;';
+  toggle.innerHTML = `
+    <span style="color:#3D6A8A;">IdP:</span>
+    <button id="idp-local" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;
+      background:var(--navy);color:white;border:none;cursor:pointer;">Local</button>
+    <button id="idp-azure" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;
+      background:none;color:#2C5070;border:1px solid #C8D2DC;cursor:pointer;">Azure AD</button>`;
+  right.insertBefore(toggle, right.firstChild);
+
+  document.getElementById('idp-local').addEventListener('click', () => setIdpMode(false));
+  document.getElementById('idp-azure').addEventListener('click', () => setIdpMode(true));
+}
+
+function setIdpMode(azure) {
+  idpMode = azure;
+  const btnLocal = document.getElementById('idp-local');
+  const btnAzure = document.getElementById('idp-azure');
+  if (!btnLocal || !btnAzure) return;
+  if (azure) {
+    btnAzure.style.cssText = 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;background:var(--navy);color:white;border:none;cursor:pointer;';
+    btnLocal.style.cssText  = 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;background:none;color:#2C5070;border:1px solid #C8D2DC;cursor:pointer;';
+    // Patch step 8 httpPreview to show Azure AD path
+    STEPS[8].httpBadge = '302 → Azure AD';
+  } else {
+    btnLocal.style.cssText  = 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;background:var(--navy);color:white;border:none;cursor:pointer;';
+    btnAzure.style.cssText  = 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;background:none;color:#2C5070;border:1px solid #C8D2DC;cursor:pointer;';
+    STEPS[8].httpBadge = '302 → /login or IdP';
+  }
+  // Re-render current step if it is step 8
+  if (state.current === 8) window.DEMO.renderStep(8);
+}
+
+// ── Auto-play with typewriter-completion-driven timing ────────────
+let _autoPlayActive = false;
+let _autoPlayTimer  = null;
+
+function autoAdvance() {
+  if (!_autoPlayActive) return;
+  const next = state.current + 1;
+  if (next >= STEPS.length) {
+    _autoPlayActive = false;
+    DOM.btnPlay.textContent = '▶';
+    return;
+  }
+  window.DEMO.renderStep(next);
+  // URL hash
+  history.replaceState(null, '', `#step-${next + 1}`);
+}
+
+// Called by Task 4's typewriter onDone
+window.DEMO.onTypingDone = function() {
+  if (!_autoPlayActive) return;
+  const speed = parseFloat(DOM.speedSelect.value) || 1;
+  // Pause between steps: 800ms at 1×
+  const pause = Math.round(800 / speed);
+  _autoPlayTimer = setTimeout(autoAdvance, pause);
+};
+
+// Override Task 2 play controls
+DOM.btnPlay.onclick = null;
+DOM.btnPlay.addEventListener('click', function toggleAutoPlay() {
+  if (_autoPlayActive) {
+    _autoPlayActive = false;
+    if (_autoPlayTimer) { clearTimeout(_autoPlayTimer); _autoPlayTimer = null; }
+    DOM.btnPlay.textContent = '▶';
+  } else {
+    _autoPlayActive = true;
+    DOM.btnPlay.textContent = '⏸';
+    if (state.current < 0) {
+      window.DEMO.renderStep(0);
+      history.replaceState(null, '', '#step-1');
+    } else if (state.current >= STEPS.length - 1) {
+      window.DEMO.restart();
+      setTimeout(() => {
+        _autoPlayActive = true;
+        DOM.btnPlay.textContent = '⏸';
+        window.DEMO.renderStep(0);
+      }, 100);
+    } else {
+      autoAdvance();
+    }
+  }
+}, { once: false });
+
+// ── URL hash navigation ───────────────────────────────────────────
+function readHash() {
+  const m = location.hash.match(/#step-(\d+)/);
+  if (m) {
+    const n = parseInt(m[1], 10) - 1;
+    if (n >= 0 && n < STEPS.length) window.DEMO.goTo(n);
+  }
+}
+window.addEventListener('hashchange', readHash);
+
+// ── Main renderStep hook — ties all tasks together ────────────────
+const _t4Render = window.DEMO.renderStep;
+window.DEMO.renderStep = function(n) {
+  _t4Render(n);  // Tasks 1-4
+  renderTokenPanel(n);
+  renderCentrepiece(n);
+  renderAuditPanel(n);
+  // Update URL hash silently on manual navigation
+  if (!_autoPlayActive) {
+    history.replaceState(null, '', `#step-${n + 1}`);
+  }
+};
+
+// Override restart to clean up
+const _t4Restart = window.DEMO.restart;
+window.DEMO.restart = function() {
+  _autoPlayActive = false;
+  if (_autoPlayTimer) { clearTimeout(_autoPlayTimer); _autoPlayTimer = null; }
+  DOM.btnPlay.textContent = '▶';
+  // Hide centrepiece overlay
+  const ov = document.getElementById('centrepiece-overlay');
+  if (ov) ov.style.display = 'none';
+  _t4Restart();
+  tokenExpanded = false;
+  history.replaceState(null, '', location.pathname);
+};
+
+// ── Keyboard shortcut additions ───────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'KeyF') {
+    // F = toggle fullscreen
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+  if (e.code === 'Escape') {
+    const ov = document.getElementById('centrepiece-overlay');
+    if (ov && ov.style.display !== 'none') ov.style.display = 'none';
+  }
+});
+
+// ── Keyboard shortcut hint in bottom bar ─────────────────────────
+const kbHint = document.createElement('div');
+kbHint.style.cssText = 'font-size:10px;color:#3D6A8A;letter-spacing:.02em;white-space:nowrap;';
+kbHint.innerHTML = '<kbd style="background:#E8EEF4;border:1px solid #C8D2DC;border-radius:3px;padding:1px 5px;color:#2C5070;">Space</kbd> play &nbsp;'
+  + '<kbd style="background:#E8EEF4;border:1px solid #C8D2DC;border-radius:3px;padding:1px 5px;color:#2C5070;">← →</kbd> step &nbsp;'
+  + '<kbd style="background:#E8EEF4;border:1px solid #C8D2DC;border-radius:3px;padding:1px 5px;color:#2C5070;">R</kbd> restart &nbsp;'
+  + '<kbd style="background:#E8EEF4;border:1px solid #C8D2DC;border-radius:3px;padding:1px 5px;color:#2C5070;">F</kbd> fullscreen';
+const bottombar = document.getElementById('bottombar');
+if (bottombar) bottombar.appendChild(kbHint);
+
+// ── Init ──────────────────────────────────────────────────────────
+buildIdpToggle();
+readHash();  // jump to hash on load if present
+
+console.log('TASKS 5-8 complete ✓');
+console.log('  Task 5: JWT decoder + token panel');
+console.log('  Task 6: PKCE / token exchange / token response centrepieces');
+console.log('  Task 7: Audit log accumulation + full AuditEvent JSON');
+console.log('  Task 8: IdP toggle + auto-play + URL hash + fullscreen + kbd hints');
+
+})(); // end Tasks 5-8 IIFE
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 10 — Embed mode · Share-a-step · Final polish
+   ═══════════════════════════════════════════════════════════════════ */
+(function() {
+
+// ── Embed mode: ?embed=1 hides topbar, reduces bottom bar ────────
+const params = new URLSearchParams(location.search);
+const isEmbed = params.get('embed') === '1';
+const autoStart = params.get('auto') === '1';
+
+if (isEmbed) {
+  const topbar = document.getElementById('topbar');
+  if (topbar) topbar.style.display = 'none';
+  // Reduce bottom bar height
+  const bb = document.getElementById('bottombar');
+  if (bb) bb.style.height = '42px';
+  // Hide keyboard hints in embed
+  const hints = document.querySelector('#bottombar div:last-child');
+  if (hints && hints.querySelector('kbd')) hints.style.display = 'none';
+}
+
+// ── Auto-start on load (for embed) ───────────────────────────────
+if (autoStart) {
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const btn = document.getElementById('btn-play');
+      if (btn) btn.click();
+    }, 800);
+  });
+}
+
+// ── Share-a-step button in topbar right ──────────────────────────
+function buildShareBtn() {
+  const right = document.querySelector('.tb-right');
+  if (!right || isEmbed) return;
+
+  const shareBtn = document.createElement('button');
+  shareBtn.style.cssText = `font-size:11px;font-weight:600;padding:3px 10px;
+    border-radius:6px;border:1px solid #C8D2DC;background:#E8EEF4;
+    color:#2C5070;cursor:pointer;font-family:var(--font-sans);`;
+  shareBtn.textContent = '⎘ Share step';
+  shareBtn.title = 'Copy link to current step';
+
+  shareBtn.addEventListener('click', () => {
+    const { state } = window.DEMO;
+    const step = state.current >= 0 ? state.current + 1 : 1;
+    const url = `${location.origin}${location.pathname}#step-${step}`;
+    navigator.clipboard.writeText(url).then(() => {
+      shareBtn.textContent = '✓ Copied!';
+      shareBtn.style.color = '#0D7A6E';
+      shareBtn.style.borderColor = 'rgba(13,122,110,.4)';
+      setTimeout(() => {
+        shareBtn.textContent = '⎘ Share step';
+        shareBtn.style.color = '#2C5070';
+        shareBtn.style.borderColor = '';
+      }, 2000);
+    }).catch(() => {
+      // Fallback: show URL in prompt
+      prompt('Copy this link:', url);
+    });
+  });
+
+  // Insert before the first link
+  right.insertBefore(shareBtn, right.firstChild);
+}
+
+// ── Visual polish: smooth panel body scrollbars ───────────────────
+const style = document.createElement('style');
+style.textContent = `
+  /* Improved scrollbar for all panels */
+  .code-scroll::-webkit-scrollbar       { width: 5px; }
+  .code-scroll::-webkit-scrollbar-track { background: var(--surface3); }
+  .code-scroll::-webkit-scrollbar-thumb {
+    background: #A8C8E0; border-radius: 3px;
+  }
+  .code-scroll::-webkit-scrollbar-thumb:hover { background: #3D6A8A; }
+
+  /* Smooth transition on panel content updates */
+  #http-content, #token-content, #audit-content {
+    transition: opacity .15s ease;
+  }
+
+  /* Tighter connection step labels */
+  .conn-step-label { font-size: 9px; fill: #3D6A8A; font-family: monospace; }
+
+  /* Active connection glow pulse */
+  @keyframes connPulse {
+    0%   { stroke-opacity: 1; }
+    50%  { stroke-opacity: .65; }
+    100% { stroke-opacity: 1; }
+  }
+  .conn-line.active  { animation: connPulse 1.8s ease-in-out infinite; }
+  .conn-line.teal    { animation: connPulse 1.8s ease-in-out infinite; }
+
+  /* Better bottom bar on smaller screens */
+  @media (max-width: 900px) {
+    #step-label { min-width: 140px; font-size: 11px; }
+    #bottombar  { gap: .5rem; padding: 0 .75rem; }
+  }
+
+  /* Embed mode: no topbar space wasted */
+  body.embed-mode #topbar { display: none; }
+
+  /* Centrepiece overlay smooth entrance */
+  #centrepiece-overlay {
+    animation: fadeIn .2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(.98); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* Token expand animation */
+  #id-token-expander {
+    transition: max-height .3s ease;
+  }
+
+  /* Node active pulse on first activation */
+  .actor-node.active rect {
+    animation: nodePulse .4s ease;
+  }
+  @keyframes nodePulse {
+    0%  { filter: drop-shadow(0 0 0px rgba(27,79,138,0)); }
+    60% { filter: drop-shadow(0 0 16px rgba(27,79,138,.5)); }
+    100%{ filter: drop-shadow(0 0 10px rgba(27,79,138,.25)); }
+  }
+  .actor-node.teal rect {
+    animation: tealPulse .4s ease;
+  }
+  @keyframes tealPulse {
+    0%  { filter: drop-shadow(0 0 0px rgba(13,122,110,0)); }
+    60% { filter: drop-shadow(0 0 16px rgba(13,122,110,.5)); }
+    100%{ filter: drop-shadow(0 0 10px rgba(13,122,110,.25)); }
+  }
+`;
+document.head.appendChild(style);
+
+// ── Init ──────────────────────────────────────────────────────────
+buildShareBtn();
+if (isEmbed) document.body.classList.add('embed-mode');
+
+console.log('TASK 10 complete ✓ — embed mode, share-a-step, polish');
+console.log('  ?embed=1 — hides topbar for iframe use');
+console.log('  ?auto=1  — auto-starts playback (combine: ?embed=1&auto=1)');
+console.log('  Share step button copies #step-N URL to clipboard');
+
+})(); // end Task 10 IIFE
+</script>
+</body>
+</html>

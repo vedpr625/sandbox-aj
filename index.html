@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AJ FHIR Sandbox — Interactive SMART on FHIR Platform</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --navy:#1B4F8A;--navy-d:#133A6A;--navy-lt:#EBF2FA;--ice:#F0F7FF;--ice-d:#E0EFFE;
+  --teal:#0D7A6E;--teal-d:#0A6058;--teal-lt:#E6F4F2;--teal-mid:#1A9E90;
+  --dark:#0D1F33;--text:#2C5070;--muted:#3D6A8A;--dim:#5A8AA8;
+  --border:#B8D4E8;--border-lt:#DDE8F4;--bg:#F4F7FB;--surface:#fff;
+  --pass:#0A6058;--pass-lt:#E6F4F0;
+  --warn:#854D0E;--warn-lt:#FEF9EC;--warn-b:rgba(133,77,14,.2);
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  --r:12px;--r-lg:16px;--r-xl:20px;
+  --shadow:0 1px 4px rgba(27,79,138,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 8px 30px rgba(27,79,138,.1),0 2px 6px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);font-size:16px;color:var(--dark);background:var(--bg);line-height:1.6}
+a{text-decoration:none;color:inherit}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:50;background:#F0F7FF;border-bottom:1px solid var(--border);}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 1.5rem;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{position:relative;width:36px;height:36px;flex-shrink:0;}
+.logo-circle{width:36px;height:36px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;}
+.logo-circle span{color:white;font-size:11px;font-weight:800;letter-spacing:-.5px;}
+.logo-arc{position:absolute;top:0;left:0;width:36px;height:36px;}
+.logo-text{display:flex;align-items:baseline;gap:6px;}
+.logo-fhir{font-size:18px;font-weight:800;color:var(--dark);letter-spacing:-.5px;}
+.logo-sub{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;border-left:1px solid var(--border);padding-left:6px;}
+.nav-links{display:flex;align-items:center;gap:2px;}
+.nl{font-size:14px;font-weight:500;color:var(--muted);padding:6px 12px;border-radius:8px;transition:all .12s;}
+.nl:hover,.nl.active{background:var(--ice-d);color:var(--navy);}
+.nl.active{font-weight:600;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.env-pill{font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:var(--teal-lt);color:var(--teal-d);border:1px solid rgba(10,96,80,.2);display:flex;align-items:center;gap:5px;}
+.env-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+.back-btn{font-size:13px;font-weight:500;color:var(--muted);padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:white;transition:all .12s;}
+.back-btn:hover{border-color:var(--navy);color:var(--navy);}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(160deg,#E8F4FD 0%,#F4F7FB 55%,#E6F4F2 100%);padding:80px 1.5rem 72px;border-bottom:1px solid var(--border-lt);}
+.hero-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.75);border:1px solid rgba(13,122,110,.3);border-radius:20px;padding:5px 16px;margin-bottom:1.5rem;}
+.hero-eyebrow span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal-d);}
+.hero-eyebrow-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0;}
+.hero-h1{font-size:clamp(2.25rem,4vw,3.25rem);font-weight:800;line-height:1.06;letter-spacing:-.04em;color:var(--dark);margin-bottom:1.125rem;}
+.hero-h1 em{font-style:normal;color:var(--navy);}
+.hero-p{font-size:18px;color:var(--muted);line-height:1.65;max-width:480px;margin-bottom:2rem;}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;}
+.btn-prim{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:white;font-size:15px;font-weight:600;padding:.75rem 1.75rem;border-radius:9px;border:none;cursor:pointer;font-family:var(--sans);transition:background .14s;}
+.btn-prim:hover{background:var(--navy-d);}
+.btn-sec{display:inline-flex;align-items:center;gap:7px;background:white;color:var(--navy);font-size:15px;font-weight:600;padding:.75rem 1.75rem;border-radius:9px;border:2px solid var(--border);cursor:pointer;font-family:var(--sans);transition:all .14s;}
+.btn-sec:hover{border-color:var(--navy);}
+
+/* Hero right: entry point cards */
+.hero-cards{display:flex;flex-direction:column;gap:14px;}
+.entry-card{background:white;border:1.5px solid var(--border);border-radius:var(--r-xl);padding:20px 22px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow);}
+.entry-card:hover{border-color:var(--navy);box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.entry-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.entry-icon svg{width:22px;height:22px;stroke-width:1.8;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+.ei-teal{background:var(--teal-lt);color:var(--teal-d);}
+.ei-navy{background:var(--navy-lt);color:var(--navy);}
+.ei-muted{background:#F1F4F8;color:var(--muted);}
+.entry-title{font-size:15px;font-weight:700;color:var(--dark);margin-bottom:3px;}
+.entry-sub{font-size:13px;color:var(--muted);line-height:1.4;}
+.entry-arrow{margin-left:auto;font-size:18px;color:var(--dim);flex-shrink:0;transition:transform .14s;}
+.entry-card:hover .entry-arrow{transform:translateX(3px);color:var(--navy);}
+.entry-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:4px;display:inline-block;}
+.eb-eval{background:var(--teal-lt);color:var(--teal-d);}
+.eb-dev{background:var(--navy-lt);color:var(--navy);}
+.eb-arch{background:#F1F4F8;color:var(--muted);}
+
+/* ── STATS STRIP ── */
+.stats{background:var(--navy-d);padding:28px 1.5rem;}
+.stats-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1.5rem;}
+.stat{text-align:center;}
+.stat-n{font-size:24px;font-weight:800;color:white;letter-spacing:-.02em;}
+.stat-l{font-size:12px;font-weight:500;color:rgba(255,255,255,.55);margin-top:3px;text-transform:uppercase;letter-spacing:.05em;}
+
+/* ── HOW TO USE ── */
+.how{padding:72px 1.5rem;background:var(--surface);}
+.how-inner{max-width:1200px;margin:0 auto;}
+.section-eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal-d);margin-bottom:10px;}
+.section-title{font-size:clamp(1.75rem,3vw,2.25rem);font-weight:800;color:var(--dark);letter-spacing:-.03em;line-height:1.1;margin-bottom:12px;}
+.section-sub{font-size:17px;color:var(--muted);max-width:600px;line-height:1.65;margin-bottom:2.5rem;}
+.how-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;}
+.how-steps{display:flex;flex-direction:column;gap:0;}
+.how-step{display:grid;grid-template-columns:40px 1fr;gap:14px;padding:20px 0;border-bottom:1px solid var(--border-lt);}
+.how-step:last-child{border-bottom:none;}
+.hs-num{width:40px;height:40px;border-radius:50%;background:var(--navy-lt);color:var(--navy);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.hs-title{font-size:16px;font-weight:700;color:var(--dark);margin-bottom:5px;}
+.hs-desc{font-size:14px;color:var(--muted);line-height:1.6;}
+
+/* Credentials card */
+.creds-card{background:var(--dark);border-radius:var(--r-xl);padding:28px 26px;color:white;}
+.creds-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.45);margin-bottom:18px;}
+.cred-row{display:flex;flex-direction:column;gap:3px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.1);}
+.cred-row:last-of-type{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.cr-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.4);}
+.cr-value{font-size:15px;font-family:var(--mono);font-weight:500;color:white;margin-top:1px;}
+.cr-sub{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;}
+.creds-note{margin-top:18px;padding:12px 14px;background:rgba(255,255,255,.06);border-radius:8px;font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;}
+
+/* ── WHAT'S REAL ── */
+.real{padding:64px 1.5rem;background:var(--bg);}
+.real-inner{max-width:1200px;margin:0 auto;}
+.real-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2.5rem;}
+.real-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);padding:24px;box-shadow:var(--shadow);}
+.rc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.rc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.rc-dot-green{background:#22C55E;}
+.rc-dot-amber{background:#F59E0B;}
+.rc-title{font-size:15px;font-weight:700;}
+.rc-item{display:flex;align-items:baseline;gap:9px;padding:8px 0;border-bottom:1px solid var(--border-lt);font-size:14px;}
+.rc-item:last-child{border-bottom:none;}
+.rc-check{font-size:13px;flex-shrink:0;}
+.rc-name{font-weight:500;color:var(--dark);}
+.rc-detail{font-size:12px;color:var(--muted);margin-top:1px;}
+
+/* ── FOOTER ── */
+footer{background:var(--navy-d);padding:36px 1.5rem;}
+.footer-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+.footer-logo{font-size:16px;font-weight:800;color:white;letter-spacing:-.02em;}
+.footer-links{display:flex;gap:20px;}
+.footer-links a{font-size:13px;color:rgba(255,255,255,.5);transition:color .12s;}
+.footer-links a:hover{color:white;}
+.footer-right{font-size:12px;color:rgba(255,255,255,.35);}
+
+@media(max-width:768px){
+  .hero-inner{grid-template-columns:1fr;}
+  .how-grid{grid-template-columns:1fr;}
+  .real-grid{grid-template-columns:1fr;}
+}
+
+/* ─── Responsive: nav ─── */
+@media(max-width:768px){
+  .nav-links{display:none}
+  .back-btn{display:none}
+  .env-pill{font-size:11px;padding:4px 10px}
+  .logo-fhir{font-size:15px}
+  .logo-sub{display:none}
+}
+
+
+/* ─── Responsive: index ─── */
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;gap:2.5rem}
+  .hero-cards{margin-top:8px}
+  .hero-h1{font-size:clamp(1.75rem,6vw,2.5rem)}
+}
+@media(max-width:768px){
+  .hero{padding:48px 1.25rem 40px}
+  .hero-inner{grid-template-columns:1fr}
+  .hero-h1{font-size:clamp(1.6rem,7vw,2.2rem)}
+  .hero-p{font-size:16px}
+  .hero-actions{flex-direction:column;gap:10px}
+  .btn-prim,.btn-sec{width:100%;justify-content:center;padding:.875rem 1.5rem}
+  .stats-inner{grid-template-columns:repeat(3,1fr);gap:1rem}
+  .how-grid{grid-template-columns:1fr}
+  .creds-card{margin-top:0}
+  .real-grid{grid-template-columns:1fr}
+  .footer-inner{flex-direction:column;align-items:flex-start;gap:14px}
+  .footer-links{flex-wrap:wrap;gap:14px}
+}
+@media(max-width:480px){
+  .stats-inner{grid-template-columns:repeat(2,1fr)}
+  .hero-actions{flex-direction:column}
+  .section-title{font-size:1.5rem}
+}
+
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="logo">
+      <div class="logo-mark">
+        <div class="logo-circle"><span>AJ</span></div>
+        <svg class="logo-arc" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+          <path d="M5 18 C5 10.8 10.8 5 18 5 C21.4 5 24.5 6.4 26.8 8.6" stroke="#1A9E90" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-fhir">FHIR</span>
+        <span class="logo-sub">Sandbox</span>
+      </div>
+    </a>
+        <div class="nav-links">
+      <a href="index.html" class="nl active">Home</a>
+      <a href="scenarios.html" class="nl">Scenarios</a>
+      <a href="console.html" class="nl">API Console</a>
+      <a href="walkthrough.html" class="nl">Walkthrough</a>
+      <a href="launcher.html" class="nl">SMART Launcher</a>
+    </div>
+    <div class="nav-right">
+      <span class="env-pill"><span class="env-dot"></span>sandbox</span>
+      <a href="https://ajfhir.org" target="_blank" class="back-btn">ajfhir.org ↗</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        <span>Interactive sandbox · No login required</span>
+      </div>
+      <h1 class="hero-h1">The AJ FHIR Platform,<br/><em>live in your browser.</em></h1>
+      <p class="hero-p">Test consent enforcement, lab workflows, and referral lifecycles against real SMART on FHIR infrastructure. Toggle values, fire requests, watch the interceptors respond.</p>
+      <div class="hero-actions">
+        <a href="index.html#scenarios" class="btn-prim">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Start exploring
+        </a>
+        <a href="console.html" class="btn-sec">Open API Console →</a>
+      </div>
+    </div>
+
+    <!-- Entry point cards -->
+    <div class="hero-cards">
+      <a href="scenarios.html" class="entry-card">
+        <div class="entry-icon ei-teal">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div>
+          <div class="entry-title">See the platform in action</div>
+          <div class="entry-sub">Consent enforcement, lab workflow, referral lifecycle. Interactive. No technical knowledge required.</div>
+          <span class="entry-badge eb-eval">For evaluators &amp; buyers</span>
+        </div>
+        <span class="entry-arrow">→</span>
+      </a>
+
+      <a href="console.html" class="entry-card">
+        <div class="entry-icon ei-navy">
+          <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        </div>
+        <div>
+          <div class="entry-title">Explore the API</div>
+          <div class="entry-sub">Build and fire FHIR requests. Scope enforcement runs before every call. JWT decoder included.</div>
+          <span class="entry-badge eb-dev">For integration developers</span>
+        </div>
+        <span class="entry-arrow">→</span>
+      </a>
+
+      <a href="walkthrough.html" class="entry-card">
+        <div class="entry-icon ei-muted">
+          <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        </div>
+        <div>
+          <div class="entry-title">Walk through the protocol</div>
+          <div class="entry-sub">All 34 steps of SMART App Launch v2.2 with annotated HTTP exchanges. For architects and onboarding.</div>
+          <span class="entry-badge eb-arch">For architects &amp; teams</span>
+        </div>
+        <span class="entry-arrow">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS ── -->
+<div class="stats">
+  <div class="stats-inner">
+    <div class="stat"><div class="stat-n">296+</div><div class="stat-l">Tests passing</div></div>
+    <div class="stat"><div class="stat-n">v2.2</div><div class="stat-l">SMART App Launch</div></div>
+    <div class="stat"><div class="stat-n">FHIR R4</div><div class="stat-l">Data standard</div></div>
+    <div class="stat"><div class="stat-n">RS256</div><div class="stat-l">JWT signing</div></div>
+    <div class="stat"><div class="stat-n">ATNA</div><div class="stat-l">IHE audit trail</div></div>
+    <div class="stat"><div class="stat-n">MIT</div><div class="stat-l">Open source</div></div>
+  </div>
+</div>
+
+<!-- ── HOW TO USE ── -->
+<section class="how" id="how">
+  <div class="how-inner">
+    <div class="section-eyebrow">Getting started</div>
+    <h2 class="section-title">How to use this sandbox</h2>
+    <p class="section-sub">Four steps. No account. No setup. Open a page and start.</p>
+
+    <div class="how-grid">
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="hs-num">1</div>
+          <div>
+            <div class="hs-title">Pick your entry point</div>
+            <div class="hs-desc">Hospital evaluator? Start with Scenarios — it shows the platform's clinical capabilities with zero technical knowledge. Developer? Start with the API Console to fire live requests with scope enforcement.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="hs-num">2</div>
+          <div>
+            <div class="hs-title">Use the test credentials</div>
+            <div class="hs-desc">Every page uses the same pre-seeded data. Clinician <code style="font-family:var(--mono);font-size:13px;background:#F0F4F8;padding:1px 6px;border-radius:4px;">dr.smith</code>, patient P. Kumar, SMART client <code style="font-family:var(--mono);font-size:13px;background:#F0F4F8;padding:1px 6px;border-radius:4px;">akhester-smart-client</code>. No registration required.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="hs-num">3</div>
+          <div>
+            <div class="hs-title">Change values and watch the platform react</div>
+            <div class="hs-desc">In Scenarios: toggle consent from permit to deny, select a different FHIR resource, step through the referral lifecycle. In the Console: change the scope string and see what the interceptor blocks.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="hs-num">4</div>
+          <div>
+            <div class="hs-title">Check the audit trail</div>
+            <div class="hs-desc">Every interaction writes a FHIR AuditEvent. The audit log at the bottom of the Scenarios page accumulates events for your session. Click any row to see the full IHE ATNA-compliant AuditEvent JSON.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Credentials card -->
+      <div class="creds-card">
+        <div class="creds-label">Test credentials</div>
+
+        <div class="cred-row">
+          <div class="cr-label">Clinician</div>
+          <div class="cr-value">dr.smith / sandbox123</div>
+          <div class="cr-sub">Practitioner/dr-smith · Cardiology app access</div>
+        </div>
+        <div class="cred-row">
+          <div class="cr-label">Patient</div>
+          <div class="cr-value">ePatient-8675309</div>
+          <div class="cr-sub">P. Kumar · DOB 1985-03-12 · Active consent</div>
+        </div>
+        <div class="cred-row">
+          <div class="cr-label">SMART Client</div>
+          <div class="cr-value">akhester-smart-client</div>
+          <div class="cr-sub">Registered · RS256 · Scopes: patient/*.rs</div>
+        </div>
+        <div class="cred-row">
+          <div class="cr-label">FHIR Base URL</div>
+          <div class="cr-value">fhir.sandbox.ajfhir.org</div>
+          <div class="cr-sub">Auth: auth.sandbox.ajfhir.org</div>
+        </div>
+        <div class="cred-row">
+          <div class="cr-label">Encounter</div>
+          <div class="cr-value">eEnc-001</div>
+          <div class="cr-sub">Cardiology · LDL elevated · Referral pending</div>
+        </div>
+
+        <div class="creds-note">These credentials work across all sandbox pages. The Auth Server, HAPI FHIR server, Consent Manager, Referral Module, and SMART Launcher all run on AWS. Every page uses the same seeded patient data.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PLATFORM CAPABILITIES ── -->
+<section class="real">
+  <div class="real-inner">
+    <div class="section-eyebrow">Platform capabilities</div>
+    <h2 class="section-title">Everything in one sandbox</h2>
+    <p class="section-sub">The AJ FHIR Platform runs end-to-end — auth server, FHIR server, consent enforcement, lab workflow, referral lifecycle, and audit trail. All accessible from your browser.</p>
+
+    <div class="real-grid">
+      <div class="real-card">
+        <div class="rc-head">
+          <span class="rc-dot rc-dot-green"></span>
+          <span class="rc-title" style="color:var(--pass)">Infrastructure — running on AWS</span>
+        </div>
+        <div class="rc-item">
+          <span class="rc-check" style="color:var(--pass)">✓</span>
+          <div><div class="rc-name">Spring Auth Server 1.3</div><div class="rc-detail">PKCE S256 · RS256 JWT · SMART App Launch v2.2 · 90 tests passing</div></div>
+        </div>
+        <div class="rc-item">
+          <span class="rc-check" style="color:var(--pass)">✓</span>
+          <div><div class="rc-name">HAPI FHIR JPA R4</div><div class="rc-detail">SmartScopeInterceptor · ConsentEnforcementInterceptor · DataInitializer · 206 tests</div></div>
+        </div>
+        <div class="rc-item">
+          <span class="rc-check" style="color:var(--pass)">✓</span>
+          <div><div class="rc-name">PostgreSQL + seeded patient data</div><div class="rc-detail">P. Kumar · Observations · Encounter · Consent resource · ServiceRequest · Task</div></div>
+        </div>
+        <div class="rc-item">
+          <span class="rc-check" style="color:var(--pass)">✓</span>
+          <div><div class="rc-name">IHE ATNA audit trail</div><div class="rc-detail">FHIR AuditEvent written async for every access · queryable via GET /fhir/AuditEvent</div></div>
+        </div>
+      </div>
+
+      <div class="real-card">
+        <div class="rc-head">
+          <span class="rc-dot rc-dot-green"></span>
+          <span class="rc-title" style="color:var(--pass)">Clinical modules — live</span>
+        </div>
+        <div class="rc-item">
+          <span class="rc-check" style="color:var(--pass)">✓</span>
+          <div><div class="rc-name">Consent enforcement</div><div class="rc-detail">Toggle permit/deny · block by resource class · live 403 OperationOutcome · GDPR Art.9 · DISHA</div></div>
+        </div>
+        <div class="rc-item">
+          <span class="rc-check" style="color:var(--pass)">✓</span>
+          <div><div class="rc-name">Lab workflow</div><div class="rc-detail">ServiceRequest → Observation × 3 → DiagnosticReport · LOINC codes · dual interceptor checks</div></div>
+        </div>
+        <div class="rc-item">
+          <span class="rc-check" style="color:var(--pass)">✓</span>
+          <div><div class="rc-name">Referral lifecycle</div><div class="rc-detail">Task requested → accepted → completed · JSON-Patch · cross-facility consent · output DiagnosticReport</div></div>
+        </div>
+        <div class="rc-item">
+          <span class="rc-check" style="color:var(--pass)">✓</span>
+          <div><div class="rc-name">SMART App Launcher</div><div class="rc-detail">EHR launch + standalone · real PKCE OAuth flow · scope builder · launch URL constructor</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <span class="footer-logo">AJ FHIR Platform</span>
+    <div class="footer-links">
+      <a href="index.html">Scenarios</a>
+      <a href="console.html">API Console</a>
+      <a href="walkthrough.html">Walkthrough</a>
+      <a href="launcher.html">Launcher</a>
+      <a href="https://ajfhir.com" target="_blank">ajfhir.com ↗</a>
+      <a href="https://ajfhir.org" target="_blank">Docs ↗</a>
+    </div>
+    <span class="footer-right">SMART App Launch v2.2 · FHIR R4 · MIT Licence</span>
+  </div>
+</footer>
+
+</body>
+</html>

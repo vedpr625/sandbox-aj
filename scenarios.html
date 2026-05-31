@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Scenarios — AJ FHIR Sandbox</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ═══════════════════════════════════════════════════════
+   AJ FHIR Sandbox — Scenario Showcase
+   Typography, spacing and colour match ajfhir.com exactly
+   Font: Inter (system stack), generous sizing throughout
+   ═══════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  /* ── Palette — exact match to ajfhir.com ── */
+  --navy:         #1B4F8A;
+  --navy-d:       #133A6A;
+  --navy-lt:      #EBF2FA;
+  --teal:         #0D7A6E;
+  --teal-d:       #0A6058;
+  --teal-lt:      #E6F4F2;
+  --dark:         #0D1F33;
+  --text:         #2C5070;
+  --muted:        #3D6A8A;
+  --dim:          #7AAAD0;
+  --border:       #B8D4E8;
+  --border-lt:    #DDE8F4;
+  --bg:           #F4F7FB;
+  --surface:      #FFFFFF;
+  --surface2:     #F8FAFD;
+  /* ── Status ── */
+  --pass:         #0A6058;
+  --pass-lt:      #E6F4F0;
+  --pass-b:       rgba(10,96,80,.2);
+  --block:        #B91C1C;
+  --block-lt:     #FEF2F2;
+  --block-b:      rgba(185,28,28,.18);
+  --warn:         #854D0E;
+  --warn-lt:      #FEF9EC;
+  --warn-b:       rgba(133,77,14,.2);
+  --purple:       #5B21B6;
+  --purple-lt:    #F3F0FE;
+  --purple-b:     rgba(91,33,182,.18);
+  /* ── Syntax (GitHub Light) ── */
+  --syn-k:        #0550AE;
+  --syn-s:        #0A5A50;
+  --syn-n:        #854D0E;
+  --syn-t:        #5B21B6;
+  --syn-m:        #5A7A96;
+  --syn-b:        #B91C1C;
+  /* ── Typography — matches ajfhir.com ── */
+  --sans:         'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:         'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  /* ── Radii — ajfhir.com uses 12–20px ── */
+  --r:            12px;
+  --r-lg:         16px;
+  --r-xl:         20px;
+  /* ── Shadows ── */
+  --shadow:       0 1px 4px rgba(27,79,138,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:    0 8px 30px rgba(27,79,138,.1),0 2px 6px rgba(0,0,0,.05);
+  --shadow-card:  0 2px 8px rgba(27,79,138,.06);
+}
+
+html,body{
+  width:100%;height:100%;
+  background:var(--bg);
+  font-family:var(--sans);
+  font-size:16px;           /* ajfhir.com base */
+  color:var(--dark);
+  line-height:1.6;
+  overflow:hidden
+}
+
+/* ═══ SHELL ═══════════════════════════════════════════ */
+#shell{width:100%;height:calc(100vh - 64px);display:flex;flex-direction:column}
+
+/* ═══ TOPBAR ═══════════════════════════════════════════
+   Matches ajfhir.com navbar exactly: logo, nav links, CTA
+   ════════════════════════════════════════════════════ */
+#topbar{
+  height:56px;background:var(--surface);
+  border-bottom:1.5px solid var(--border-lt);
+  display:flex;align-items:center;padding:0 24px;gap:16px;
+  flex-shrink:0;box-shadow:var(--shadow)
+}
+.logo{
+  display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0
+}
+.logo-mark{
+  width:34px;height:34px;background:var(--navy);border-radius:10px;
+  display:flex;align-items:center;justify-content:center
+}
+.logo-mark svg{width:19px;height:19px;fill:none;stroke:white;stroke-width:1.7;stroke-linecap:round}
+.logo-text{font-size:15px;font-weight:700;color:var(--dark);letter-spacing:-.02em}
+.logo-text em{font-style:normal;color:var(--navy)}
+
+/* Back to site link */
+.back-link{
+  font-size:13px;color:var(--muted);text-decoration:none;
+  display:flex;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:8px;transition:all .12s
+}
+.back-link:hover{background:var(--navy-lt);color:var(--navy)}
+.back-link svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+
+.tb-sep{flex:1}
+
+/* Env badge */
+.env-badge{
+  font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;
+  background:var(--teal-lt);color:var(--teal-d);
+  border:1px solid rgba(13,122,110,.2);letter-spacing:.02em
+}
+.live-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#22C55E;margin-right:5px
+}
+
+/* ═══ PAGE HEADER — below topbar ═══════════════════════
+   Same pattern as ajfhir.com section intros
+   ════════════════════════════════════════════════════ */
+#page-header{
+  background:linear-gradient(180deg,#EEF5FF 0%,#F4F7FB 100%);
+  border-bottom:1px solid var(--border-lt);
+  padding:28px 32px 24px;flex-shrink:0
+}
+.ph-eyebrow{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--teal-d);background:var(--teal-lt);
+  padding:4px 14px;border-radius:20px;border:1px solid rgba(13,122,110,.2);
+  margin-bottom:10px
+}
+.ph-title{
+  font-size:clamp(1.5rem,2.5vw,2rem);font-weight:800;
+  color:var(--dark);letter-spacing:-.03em;line-height:1.1;margin-bottom:6px
+}
+.ph-sub{font-size:15px;color:var(--muted);max-width:680px;line-height:1.6}
+.ph-meta{
+  display:flex;align-items:center;gap:16px;margin-top:14px;flex-wrap:wrap
+}
+.ph-chip{
+  font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;
+  border:1px solid;display:flex;align-items:center;gap:5px
+}
+.pc-navy{background:var(--navy-lt);color:var(--navy);border-color:rgba(27,79,138,.2)}
+.pc-teal{background:var(--teal-lt);color:var(--teal-d);border-color:rgba(13,122,110,.2)}
+
+/* ═══ BODY LAYOUT ══════════════════════════════════════ */
+#body{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* ═══ NAV — left sidebar ═══════════════════════════════
+   Wide enough to breathe. Font matches site.
+   ════════════════════════════════════════════════════ */
+#nav{
+  width:240px;flex-shrink:0;background:var(--surface);
+  border-right:1.5px solid var(--border-lt);
+  display:flex;flex-direction:column;overflow:hidden
+}
+.nav-section{padding:18px 14px 8px}
+.nav-label{
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--dim);padding:0 8px;margin-bottom:8px
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:11px 12px;
+  border-radius:var(--r);font-size:14px;font-weight:500;color:var(--muted);
+  cursor:pointer;transition:all .12s;user-select:none;
+  border:1.5px solid transparent;margin-bottom:2px
+}
+.nav-item:hover{background:var(--navy-lt);color:var(--navy)}
+.nav-item.active{
+  background:var(--navy-lt);color:var(--navy);
+  border-color:rgba(27,79,138,.2)
+}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;stroke-width:1.8;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+.nav-badge{
+  margin-left:auto;font-size:11px;font-weight:600;padding:2px 8px;
+  border-radius:20px;background:rgba(27,79,138,.08);color:var(--navy)
+}
+.nav-divider{height:1px;background:var(--border-lt);margin:8px 14px}
+
+/* Patient card in nav */
+.patient-card{
+  margin:4px 12px 18px;padding:18px;
+  background:var(--surface2);border:1.5px solid var(--border-lt);
+  border-radius:var(--r-lg)
+}
+.pc-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.avatar{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--navy),var(--teal));
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:white
+}
+.pc-name{font-size:14px;font-weight:600;color:var(--dark)}
+.pc-id{font-size:11px;color:var(--dim);font-family:var(--mono);margin-top:1px}
+.pc-tags{display:flex;flex-wrap:wrap;gap:5px}
+.ptag{
+  font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid
+}
+.pt-enc{background:var(--navy-lt);color:var(--navy);border-color:rgba(27,79,138,.2)}
+.pt-con{background:var(--teal-lt);color:var(--teal-d);border-color:rgba(13,122,110,.2)}
+.pt-den{background:var(--block-lt);color:var(--block);border-color:var(--block-b)}
+
+/* ═══ MAIN CONTENT ═════════════════════════════════════ */
+#main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+#main::-webkit-scrollbar{width:6px}
+#main::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ═══ SCENARIO CARD ════════════════════════════════════
+   Matches ajfhir.com .card component: white, rounded-2xl,
+   1.5px border, hover shadow + translateY(-2px)
+   ════════════════════════════════════════════════════ */
+.sc{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--r-xl);box-shadow:var(--shadow-card);
+  overflow:hidden;margin-bottom:20px;
+  transition:box-shadow .2s,transform .2s,border-color .2s
+}
+.sc:hover{
+  border-color:rgba(27,79,138,.35);
+  box-shadow:var(--shadow-md);
+  transform:translateY(-2px)
+}
+
+/* Scenario header */
+.sc-hd{
+  padding:18px 22px;display:flex;align-items:center;gap:14px;
+  border-bottom:1.5px solid var(--border-lt);cursor:pointer;
+  background:var(--surface)
+}
+.sc-icon{
+  width:42px;height:42px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0
+}
+.sc-icon svg{width:22px;height:22px;stroke-width:1.8;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+.ic-c{background:var(--teal-lt);color:var(--teal-d)}
+.ic-l{background:var(--warn-lt);color:var(--warn)}
+.ic-r{background:var(--purple-lt);color:var(--purple)}
+
+.sc-title{font-size:16px;font-weight:700;color:var(--dark);letter-spacing:-.01em}
+.sc-sub{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.45}
+.sc-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.sc-badge{
+  font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;
+  border:1px solid;letter-spacing:.02em
+}
+.bl{background:var(--teal-lt);color:var(--teal-d);border-color:rgba(13,122,110,.2)}
+.bb{background:var(--warn-lt);color:var(--warn);border-color:var(--warn-b)}
+.bp{background:var(--surface2);color:var(--muted);border-color:var(--border)}
+.chevron{color:var(--dim);font-size:14px;transition:transform .2s;flex-shrink:0;margin-left:4px}
+.sc.open .chevron{transform:rotate(180deg)}
+
+.sc-body{padding:22px;display:none;flex-direction:column;gap:18px}
+.sc.open .sc-body{display:flex}
+
+/* ═══ CONTROL STRIP ════════════════════════════════════ */
+.controls{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+  padding:22px 24px;background:var(--surface2);
+  border:1.5px solid var(--border-lt);border-radius:var(--r-lg)
+}
+.ctrl-label{
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted);margin-bottom:8px
+}
+
+/* Segmented control */
+.seg{
+  display:flex;gap:1px;border:1.5px solid var(--border);
+  border-radius:10px;overflow:hidden;background:var(--surface2)
+}
+.seg-btn{
+  flex:1;font-size:14px;font-weight:600;padding:11px 18px;
+  border:none;background:none;cursor:pointer;color:var(--muted);
+  font-family:var(--sans);transition:all .14s;white-space:nowrap
+}
+.seg-btn.sel{
+  background:var(--surface);color:var(--dark);
+  box-shadow:0 1px 4px rgba(27,79,138,.1)
+}
+.seg-btn.sel.pass{color:var(--pass)}
+.seg-btn.sel.deny{color:var(--block)}
+
+/* Resource select */
+.res-sel{
+  font-size:14px;font-family:var(--sans);padding:12px 14px;
+  border:1.5px solid var(--border);border-radius:10px;
+  background:var(--surface);color:var(--dark);outline:none;
+  cursor:pointer;width:100%;appearance:none;
+  transition:border-color .14s
+}
+.res-sel:focus{border-color:var(--navy);outline:3px solid rgba(27,79,138,.12);outline-offset:-1px}
+
+/* ═══ VERDICT BANNER ═══════════════════════════════════ */
+.verdict{
+  display:flex;align-items:flex-start;gap:18px;
+  padding:22px 24px;border-radius:var(--r-lg);border:1.5px solid;
+  transition:all .2s
+}
+.verdict.pass{background:var(--pass-lt);border-color:var(--pass-b)}
+.verdict.block{background:var(--block-lt);border-color:var(--block-b)}
+.v-icon{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;margin-top:1px
+}
+.verdict.pass .v-icon{background:var(--pass);color:white}
+.verdict.block .v-icon{background:var(--block);color:white}
+.v-title{font-size:15px;font-weight:700}
+.verdict.pass .v-title{color:var(--pass)}
+.verdict.block .v-title{color:var(--block)}
+.v-sub{font-size:12.5px;color:var(--muted);margin-top:4px;font-family:var(--mono);line-height:1.5}
+.v-spec{
+  margin-left:auto;font-size:11px;color:var(--muted);
+  text-align:right;line-height:1.5;flex-shrink:0
+}
+
+/* ═══ HTTP PANEL ════════════════════════════════════════ */
+.http-panel{
+  border:1.5px solid var(--border-lt);border-radius:var(--r-xl);overflow:hidden
+}
+.http-hd{
+  height:46px;display:flex;align-items:center;padding:0 20px;gap:12px;
+  background:var(--surface2);border-bottom:1.5px solid var(--border-lt)
+}
+.method{
+  font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;
+  font-family:var(--mono);letter-spacing:.02em
+}
+.m-get{background:var(--navy-lt);color:var(--navy)}
+.m-post{background:var(--teal-lt);color:var(--teal-d)}
+.m-patch{background:var(--warn-lt);color:var(--warn)}
+.http-path{font-size:13px;font-family:var(--mono);color:var(--muted)}
+.http-stat{
+  margin-left:auto;font-size:12px;font-weight:700;
+  padding:3px 10px;border-radius:6px;font-family:var(--mono)
+}
+.s200{background:var(--pass-lt);color:var(--pass)}
+.s403{background:var(--block-lt);color:var(--block)}
+.s201{background:var(--navy-lt);color:var(--navy)}
+.lat{font-size:11px;color:var(--dim);margin-left:4px}
+.http-body{
+  padding:22px 24px;font-family:var(--mono);font-size:13.5px;
+  line-height:1.9;background:var(--surface);max-height:260px;overflow-y:auto
+}
+.http-body::-webkit-scrollbar{width:4px}
+.http-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.hk{color:var(--syn-k)}
+.hs{color:var(--syn-s)}
+.hn{color:var(--syn-n)}
+.ht{color:var(--syn-t);font-weight:600}
+.hm{color:var(--syn-m)}
+
+/* ═══ FHIR RESOURCE VIEWER ══════════════════════════════ */
+.fhir-viewer{
+  border:1.5px solid var(--border-lt);border-radius:var(--r-xl);overflow:hidden
+}
+.fhir-hd{
+  height:46px;display:flex;align-items:center;padding:0 20px;gap:10px;
+  background:var(--surface2);border-bottom:1.5px solid var(--border-lt)
+}
+.fhir-hd-title{font-size:13px;font-weight:600;color:var(--muted)}
+.fhir-hd-tag{
+  font-size:12px;font-weight:600;padding:4px 11px;border-radius:20px;
+  background:var(--navy-lt);color:var(--navy)
+}
+.copy-btn{
+  margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;
+  padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;
+  background:none;font-family:var(--sans);transition:all .12s
+}
+.copy-btn:hover{background:var(--surface2);border-color:var(--border);color:var(--dark)}
+.fhir-body{
+  padding:22px 24px;font-family:var(--mono);font-size:13.5px;
+  line-height:1.9;background:var(--surface);max-height:240px;overflow-y:auto
+}
+.fhir-body::-webkit-scrollbar{width:4px}
+.fhir-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.fhir-footer{
+  padding:12px 20px;background:var(--surface2);border-top:1.5px solid var(--border-lt);
+  font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px
+}
+.ff-mono{font-family:var(--mono);font-size:12px;color:var(--navy)}
+
+/* ═══ LAB RESULT CARDS ══════════════════════════════════ */
+.lab-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.lab-card{
+  border:1.5px solid var(--border-lt);border-radius:var(--r-lg);
+  padding:22px;background:var(--surface);position:relative;overflow:hidden
+}
+.lab-card.abn{border-color:var(--warn-b);background:var(--warn-lt)}
+.lab-card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px
+}
+.lab-card.norm::after{background:var(--teal)}
+.lab-card.abn::after{background:#EF9F27}
+.lc-name{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px}
+.lc-val{font-size:28px;font-weight:700;font-family:var(--mono);line-height:1;letter-spacing:-.02em}
+.lab-card.norm .lc-val{color:var(--dark)}
+.lab-card.abn .lc-val{color:var(--warn)}
+.lc-unit{font-size:13px;color:var(--muted);margin-top:4px}
+.lc-loinc{font-size:11px;color:var(--dim);font-family:var(--mono);margin-top:3px}
+.lc-tag{
+  display:inline-block;margin-top:10px;font-size:12px;font-weight:700;
+  padding:3px 10px;border-radius:20px;border:1px solid
+}
+.lab-card.norm .lc-tag{background:var(--pass-lt);color:var(--pass);border-color:var(--pass-b)}
+.lab-card.abn .lc-tag{background:var(--warn-lt);color:var(--warn);border-color:var(--warn-b)}
+
+/* ═══ FLOW STEPS ════════════════════════════════════════ */
+.flow-row{display:flex;gap:0;border:1.5px solid var(--border);border-radius:var(--r-xl);overflow:hidden}
+.flow-step{
+  flex:1;padding:14px 16px;text-align:center;
+  background:var(--surface2);border-right:1px solid var(--border-lt);
+  cursor:pointer;transition:all .14s
+}
+.flow-step:last-child{border-right:none}
+.flow-step:hover:not(.active):not(.done){background:var(--surface)}
+.flow-step.done{background:var(--pass-lt)}
+.flow-step.active{background:var(--navy-lt)}
+.fs-num{font-size:11px;color:var(--dim);margin-bottom:3px;font-weight:500}
+.fs-label{font-size:13px;font-weight:600}
+.flow-step.done .fs-label{color:var(--pass)}
+.flow-step.active .fs-label{color:var(--navy)}
+.flow-step:not(.done):not(.active) .fs-label{color:var(--muted)}
+
+/* ═══ TASK TIMELINE ═════════════════════════════════════ */
+.task-bar{display:flex;border:1.5px solid var(--border);border-radius:var(--r-xl);overflow:hidden}
+.tb-step{
+  flex:1;padding:16px 18px;border-right:1px solid var(--border-lt);
+  transition:all .14s
+}
+.tb-step:last-child{border-right:none}
+.tb-step.done{background:var(--pass-lt)}
+.tb-step.active{background:var(--navy-lt)}
+.tb-label{font-size:13px;font-weight:600}
+.tb-step.done .tb-label{color:var(--pass)}
+.tb-step.active .tb-label{color:var(--navy)}
+.tb-step:not(.done):not(.active) .tb-label{color:var(--muted)}
+.tb-sub{font-size:12px;margin-top:3px;font-family:var(--mono)}
+.tb-step.done .tb-sub{color:var(--pass);opacity:.7}
+.tb-step.active .tb-sub{color:var(--navy);opacity:.7}
+.tb-step:not(.done):not(.active) .tb-sub{color:var(--dim)}
+.tb-tick{font-size:12px;margin-top:4px}
+.tb-step.done .tb-tick{color:var(--pass)}
+.tb-step.active .tb-tick{color:var(--navy)}
+
+/* ═══ ACTION BUTTONS ════════════════════════════════════ */
+.action-row{display:flex;gap:10px;align-items:center}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 20px;background:var(--navy);color:white;border:none;
+  border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;
+  font-family:var(--sans);transition:background .12s
+}
+.btn-primary:hover{background:var(--navy-d)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary svg{width:16px;height:16px;stroke-width:2;fill:none;stroke:white;stroke-linecap:round}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 18px;background:var(--surface);color:var(--dark);
+  border:1.5px solid var(--border);border-radius:var(--r);
+  font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);
+  transition:all .12s
+}
+.btn-secondary:hover{background:var(--surface2);border-color:var(--navy);color:var(--navy)}
+.btn-secondary:disabled{opacity:.4;cursor:not-allowed}
+
+/* ═══ AUDIT LOG ═════════════════════════════════════════ */
+#audit{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--r-xl);box-shadow:var(--shadow-card);overflow:hidden;
+  margin-bottom:8px
+}
+.audit-hd{
+  padding:20px 24px;border-bottom:1.5px solid var(--border-lt);
+  display:flex;align-items:center;gap:12px
+}
+.audit-hd-title{font-size:16px;font-weight:700;color:var(--dark)}
+.audit-cnt{
+  font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;
+  background:var(--navy-lt);color:var(--navy)
+}
+.audit-compliance{font-size:12px;color:var(--muted)}
+.audit-clear{
+  margin-left:auto;font-size:13px;color:var(--muted);cursor:pointer;
+  padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;
+  background:none;font-family:var(--sans);font-weight:500;transition:all .12s
+}
+.audit-clear:hover{background:var(--surface2);border-color:var(--border);color:var(--dark)}
+.audit-rows{max-height:240px;overflow-y:auto}
+.audit-rows::-webkit-scrollbar{width:4px}
+.audit-rows::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.audit-row{
+  display:grid;grid-template-columns:72px 100px 1fr 70px;
+  gap:14px;padding:14px 24px;align-items:center;
+  border-bottom:1px solid var(--border-lt);transition:background .1s
+}
+.audit-row:last-child{border-bottom:none}
+.audit-row:hover{background:var(--surface2)}
+.audit-detail{border-bottom:1px solid var(--border-lt)}
+.ar-time{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+.ar-type{font-size:12px;font-weight:700}
+.tc-auth{color:var(--navy)}
+.tc-consent{color:var(--teal-d)}
+.tc-lab{color:var(--warn)}
+.tc-ref{color:var(--purple)}
+.tc-fhir{color:var(--muted)}
+.ar-desc{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ar-out{
+  font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;
+  text-align:center;font-family:var(--mono);white-space:nowrap
+}
+.ao-ok{background:var(--pass-lt);color:var(--pass)}
+.ao-blk{background:var(--block-lt);color:var(--block)}
+.ao-wrn{background:var(--warn-lt);color:var(--warn)}
+.ao-info{background:var(--navy-lt);color:var(--navy)}
+.audit-empty{padding:28px;text-align:center;color:var(--dim);font-size:14px}
+
+/* ═══ STATUS BAR ════════════════════════════════════════ */
+#statusbar{
+  height:34px;background:var(--surface);border-top:1.5px solid var(--border-lt);
+  display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0
+}
+.sb-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.sb-dot{width:6px;height:6px;border-radius:50%}
+.sb-green{background:#22C55E}
+.sb-sep{height:12px;width:1px;background:var(--border-lt);margin:0 2px}
+
+/* ── SHARED NAV (all pages) ── */
+.nav{position:sticky;top:0;z-index:50;background:#F0F7FF;border-bottom:1px solid var(--border);}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 1.5rem;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-mark{position:relative;width:36px;height:36px;flex-shrink:0;}
+.logo-circle{width:36px;height:36px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;}
+.logo-circle span{color:white;font-size:11px;font-weight:800;letter-spacing:-.5px;}
+.logo-arc{position:absolute;top:0;left:0;width:36px;height:36px;}
+.logo-text{display:flex;align-items:baseline;gap:6px;}
+.logo-fhir{font-size:18px;font-weight:800;color:var(--dark);letter-spacing:-.5px;}
+.logo-sub{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;border-left:1px solid var(--border);padding-left:6px;}
+.nav-links{display:flex;align-items:center;gap:2px;}
+.nl{font-size:14px;font-weight:500;color:var(--muted);padding:6px 12px;border-radius:8px;transition:all .12s;text-decoration:none;}
+.nl:hover{background:#E0EFFE;color:var(--navy);}
+.nl.active{background:#E0EFFE;color:var(--navy);font-weight:600;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.env-pill{font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:var(--teal-lt);color:var(--teal-d);border:1px solid rgba(10,96,80,.2);display:flex;align-items:center;gap:5px;}
+.env-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+.back-btn{font-size:13px;font-weight:500;color:var(--muted);padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:white;transition:all .12s;text-decoration:none;}
+.back-btn:hover{border-color:var(--navy);color:var(--navy);}
+
+
+
+/* ── Shared nav ── */
+.nav{position:sticky;top:0;z-index:50;background:#F0F7FF;border-bottom:1px solid var(--border);}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 1.5rem;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-mark{position:relative;width:36px;height:36px;flex-shrink:0;}
+.logo-circle{width:36px;height:36px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;}
+.logo-circle span{color:white;font-size:11px;font-weight:800;letter-spacing:-.5px;}
+.logo-arc{position:absolute;top:0;left:0;width:36px;height:36px;}
+.logo-text{display:flex;align-items:baseline;gap:6px;}
+.logo-fhir{font-size:18px;font-weight:800;color:var(--dark);letter-spacing:-.5px;}
+.logo-sub{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;border-left:1px solid var(--border);padding-left:6px;}
+.nav-links{display:flex;align-items:center;gap:2px;}
+.nl{font-size:14px;font-weight:500;color:var(--muted);padding:6px 12px;border-radius:8px;transition:all .12s;text-decoration:none;}
+.nl:hover{background:#E0EFFE;color:var(--navy);}
+.nl.active{background:#E0EFFE;color:var(--navy);font-weight:600;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.env-pill{font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:var(--teal-lt);color:var(--teal-d);border:1px solid rgba(10,96,80,.2);display:flex;align-items:center;gap:5px;}
+.env-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+.back-btn{font-size:13px;font-weight:500;color:var(--muted);padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:white;transition:all .12s;text-decoration:none;}
+.back-btn:hover{border-color:var(--navy);color:var(--navy);}
+/* ── Layout ── */
+#shell{display:flex;flex-direction:column;height:calc(100vh - 64px)}
+#body{display:flex;flex:1;overflow:hidden;min-height:0}
+/* ── Sidebar nav ── */
+#nav{width:240px;flex-shrink:0;background:var(--surface);border-right:1.5px solid var(--border-lt);display:flex;flex-direction:column;overflow:hidden}
+.nav-section{padding:18px 14px 8px}
+.nav-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);padding:0 8px;margin-bottom:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r);font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .12s;user-select:none;border:1.5px solid transparent;margin-bottom:2px}
+.nav-item:hover{background:var(--navy-lt);color:var(--navy)}
+.nav-item.sc-active{background:var(--navy-lt);color:var(--navy);border-color:rgba(27,79,138,.2)}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;stroke-width:1.8;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+.nav-badge{margin-left:auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:rgba(27,79,138,.08);color:var(--navy)}
+.nav-divider{height:1px;background:var(--border-lt);margin:8px 14px}
+/* Patient card */
+.patient-card{margin:4px 12px 16px;padding:14px;background:var(--surface2);border:1.5px solid var(--border-lt);border-radius:var(--r-lg)}
+.pc-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--navy),var(--teal));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white}
+.pc-name{font-size:14px;font-weight:600;color:var(--dark)}
+.pc-id{font-size:11px;color:var(--dim);font-family:var(--mono);margin-top:1px}
+.pc-tags{display:flex;flex-wrap:wrap;gap:5px}
+.ptag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid}
+.pt-enc{background:var(--navy-lt);color:var(--navy);border-color:rgba(27,79,138,.2)}
+
+/* ── Scenario panel layout ── */
+#main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+/* Scenario tabs strip */
+.sc-tabs{height:52px;background:var(--surface);border-bottom:1.5px solid var(--border-lt);display:flex;align-items:stretch;padding:0 24px;gap:0;flex-shrink:0}
+.sc-tab{display:flex;align-items:center;gap:10px;padding:0 20px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .14s;white-space:nowrap}
+.sc-tab:hover{color:var(--dark)}
+.sc-tab.active{color:var(--navy);border-bottom-color:var(--navy);font-weight:600}
+.sc-tab svg{width:17px;height:17px;stroke-width:1.8;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+.sc-tab-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--pass-lt);color:var(--pass);border:1px solid var(--pass-b)}
+/* Scenario content area */
+.sc-content{flex:1;overflow-y:auto;padding:32px 36px 48px;background:var(--surface)}
+.sc-content::-webkit-scrollbar{width:6px}
+.sc-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.sc-panel{display:none}
+.sc-panel.visible{display:flex;flex-direction:column;gap:24px;background:var(--surface)}
+/* Scenario heading */
+.sc-heading{margin-bottom:0}
+.sc-heading-title{font-size:21px;font-weight:800;color:var(--dark);letter-spacing:-.02em;margin-bottom:5px}
+.sc-heading-sub{font-size:15px;color:var(--muted);line-height:1.65}
+/* Divider between scenario content and audit */
+.sc-divider{height:1px;background:var(--border-lt);margin:24px 0}
+
+/* ─── Responsive: nav ─── */
+@media(max-width:768px){
+  .nav-links{display:none}
+  .back-btn{display:none}
+  .env-pill{font-size:11px;padding:4px 10px}
+  .logo-fhir{font-size:15px}
+  .logo-sub{display:none}
+}
+
+
+/* ─── Responsive: scenarios ─── */
+@media(max-width:900px){
+  #nav{width:200px}
+  .sc-content{padding:24px 20px 32px}
+  .sc-tabs{padding:0 16px}
+  .sc-tab{padding:0 14px;font-size:13.5px}
+}
+@media(max-width:768px){
+  #body{flex-direction:column}
+  #nav{
+    width:100%;height:auto;flex-shrink:0;
+    border-right:none;border-bottom:1.5px solid var(--border-lt);
+    flex-direction:row;overflow-x:auto;overflow-y:hidden
+  }
+  .nav-section{display:flex;flex-direction:row;align-items:center;gap:4px;padding:8px 12px;white-space:nowrap}
+  .nav-label{display:none}
+  .nav-item{padding:7px 12px;margin-bottom:0;font-size:13px;flex-shrink:0}
+  .nav-divider{display:none}
+  .patient-card{display:none}
+  #main{overflow:visible;flex:1}
+  .sc-tabs{height:auto;flex-wrap:wrap;padding:0 12px;gap:0}
+  .sc-tab{padding:10px 14px;font-size:13px}
+  .sc-tab-badge{display:none}
+  .sc-content{padding:20px 16px 32px}
+  .controls{grid-template-columns:1fr}
+  .http-panel .http-hd,
+  .fhir-hd{flex-wrap:wrap;height:auto;padding:10px 14px}
+  .lab-grid{grid-template-columns:1fr}
+  .lab-grid .lab-card:not(:last-child){margin-bottom:0}
+  .flow-row{flex-direction:column;border-radius:var(--r-xl)}
+  .flow-step{border-right:none;border-bottom:1px solid var(--border-lt)}
+  .flow-step:last-child{border-bottom:none}
+  .task-bar{flex-direction:column;border-radius:var(--r-xl)}
+  .tb-step{border-right:none;border-bottom:1px solid var(--border-lt)}
+  .tb-step:last-child{border-bottom:none}
+  .action-row{flex-wrap:wrap}
+  .btn-primary,.btn-secondary{flex:1;justify-content:center;min-width:120px}
+  .audit-row{grid-template-columns:60px 80px 1fr;gap:8px}
+  .ar-out{display:none}
+  #statusbar{flex-wrap:wrap;height:auto;padding:8px 14px;gap:8px}
+}
+@media(max-width:480px){
+  .sc-tab span:not(.sc-tab-badge){font-size:12px}
+  .audit-row{grid-template-columns:1fr;gap:4px}
+  .ar-time,.ar-type{font-size:11px}
+}
+
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="logo">
+      <div class="logo-mark">
+        <div class="logo-circle"><span>AJ</span></div>
+        <svg class="logo-arc" viewBox="0 0 36 36" fill="none"><path d="M5 18 C5 10.8 10.8 5 18 5 C21.4 5 24.5 6.4 26.8 8.6" stroke="#1A9E90" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-fhir">FHIR</span>
+        <span class="logo-sub">Sandbox</span>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nl">Home</a>
+      <a href="scenarios.html" class="nl active">Scenarios</a>
+      <a href="console.html" class="nl">API Console</a>
+      <a href="walkthrough.html" class="nl">Walkthrough</a>
+      <a href="launcher.html" class="nl">SMART Launcher</a>
+    </div>
+    <div class="nav-right">
+      <span class="env-pill"><span class="env-dot"></span>sandbox</span>
+      <a href="https://ajfhir.org" target="_blank" class="back-btn">ajfhir.org ↗</a>
+    </div>
+  </div>
+</nav>
+
+<div id="shell">
+<div id="body">
+
+<!-- Left sidebar nav -->
+<div id="nav">
+  <div class="nav-section">
+    <div class="nav-label">Patient</div>
+  </div>
+  <!-- Patient card -->
+  <div class="patient-card">
+    <div class="pc-row">
+      <div class="avatar">PK</div>
+      <div>
+        <div class="pc-name">P. Kumar</div>
+        <div class="pc-id">ePatient-8675309</div>
+      </div>
+    </div>
+    <div class="pc-tags">
+      <span class="ptag pt-enc">eEnc-001</span>
+      <span class="ptag" id="pt-consent-tag" style="background:var(--teal-lt);color:var(--teal-d);border:1px solid rgba(13,122,110,.2)">Consent active</span>
+    </div>
+  </div>
+
+  <div class="nav-divider"></div>
+
+  <div class="nav-section">
+    <div class="nav-label">Scenarios</div>
+    <div class="nav-item sc-active" id="snav-consent" onclick="showScenario('consent')">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Consent enforcement
+    </div>
+    <div class="nav-item" id="snav-lab" onclick="showScenario('lab')">
+      <svg viewBox="0 0 24 24"><path d="M6 2l2 6-4 8h12l-4-8 2-6"/><path d="M4 16h16"/></svg>
+      Lab workflow
+    </div>
+    <div class="nav-item" id="snav-ref" onclick="showScenario('ref')">
+      <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+      Referral lifecycle
+    </div>
+  </div>
+
+  <div class="nav-divider"></div>
+
+  <div class="nav-section">
+    <div class="nav-label">Session</div>
+    <div class="nav-item" onclick="showScenario('audit')">
+      <svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/></svg>
+      ATNA audit trail
+      <span class="nav-badge" id="audit-nav-count">3</span>
+    </div>
+  </div>
+</div>
+
+<!-- Main content -->
+<div id="main">
+
+  <!-- Tabs strip -->
+  <div class="sc-tabs">
+    <div class="sc-tab active" id="stab-consent" onclick="showScenario('consent')">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Consent enforcement
+      <span class="sc-tab-badge">live</span>
+    </div>
+    <div class="sc-tab" id="stab-lab" onclick="showScenario('lab')">
+      <svg viewBox="0 0 24 24"><path d="M6 2l2 6-4 8h12l-4-8 2-6"/><path d="M4 16h16"/></svg>
+      Lab workflow
+      <span class="sc-tab-badge">live</span>
+    </div>
+    <div class="sc-tab" id="stab-ref" onclick="showScenario('ref')">
+      <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+      Referral lifecycle
+      <span class="sc-tab-badge">live</span>
+    </div>
+    <div class="sc-tab" id="stab-audit" onclick="showScenario('audit')" style="margin-left:auto">
+      <svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/></svg>
+      Audit trail
+      <span class="nav-badge" id="audit-tab-count" style="border-color:transparent">3</span>
+    </div>
+  </div>
+
+  <!-- Content area -->
+  <div class="sc-content">
+
+    <!-- CONSENT panel -->
+    <div class="sc-panel visible" id="panel-consent">
+      <div class="sc-heading">
+        <div class="sc-heading-title">Consent enforcement</div>
+        <div class="sc-heading-sub">Change the consent type and resource, watch the interceptor decision update live. Every change writes a FHIR AuditEvent to your session log.</div>
+      </div>
+      
+
+      <!-- Controls -->
+      <div class="controls">
+        <div>
+          <div class="ctrl-label">provision.type</div>
+          <div class="seg">
+            <button class="seg-btn sel pass" id="btn-permit" onclick="setConsent('permit')">permit</button>
+            <button class="seg-btn" id="btn-deny" onclick="setConsent('deny')">deny</button>
+          </div>
+        </div>
+        <div>
+          <div class="ctrl-label">Resource requested</div>
+          <select class="res-sel" id="consent-res" onchange="runConsent()">
+            <option value="Observation">Observation — in provision.class ✓</option>
+            <option value="Patient">Patient — in provision.class ✓</option>
+            <option value="Condition">Condition — NOT in provision.class ✗</option>
+            <option value="Medication">Medication — NOT in provision.class ✗</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Verdict -->
+      <div class="verdict pass" id="consent-verdict">
+        <div class="v-icon">✓</div>
+        <div style="flex:1">
+          <div class="v-title">200 OK — Request permitted</div>
+          <div class="v-sub" id="consent-sub">provision.type=permit · Observation in provision.class · status=active · period valid</div>
+        </div>
+        <div class="v-spec">ConsentEnforcementInterceptor<br>GDPR Art.9 · DISHA §4.2</div>
+      </div>
+
+      <!-- HTTP pair -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="http-panel">
+          <div class="http-hd">
+            <span class="method m-get">GET</span>
+            <span class="http-path" id="consent-path">/fhir/Observation?patient=ePatient-8675309</span>
+            <span class="http-stat s200" id="consent-status">200 OK</span>
+            <span class="lat" id="consent-lat">142ms</span>
+          </div>
+          <div class="http-body">
+<span class="hm">GET</span> <span class="hs" id="consent-req-path">/fhir/Observation?patient=ePatient-8675309</span>
+<span class="hm">Host:</span> <span class="hs">fhir.sandbox.ajfhir.org</span>
+<span class="hm">Authorization:</span> <span class="hs">Bearer eyJhbGciOiJSUzI1NiIs…</span>
+<span class="hm">scope:</span> <span class="hs">patient/Observation.rs patient/Patient.rs</span>
+          </div>
+        </div>
+        <div class="http-panel">
+          <div class="http-hd">
+            <span style="font-size:12px;color:var(--dim)">← Response</span>
+          </div>
+          <div class="http-body" id="consent-resp"></div>
+        </div>
+      </div>
+
+      <!-- Consent FHIR resource -->
+      <div class="fhir-viewer">
+        <div class="fhir-hd">
+          <span class="fhir-hd-title">FHIR Consent resource — Patient/ePatient-8675309</span>
+          <span class="fhir-hd-tag">consent-P8675309</span>
+          <button class="copy-btn" onclick="copyFHIR('consent-fhir')">Copy JSON</button>
+        </div>
+        <div class="fhir-body" id="consent-fhir">
+<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"Consent"</span><span class="hm">,</span>
+<span class="hk">"id"</span><span class="hm">: </span><span class="hs">"consent-P8675309"</span><span class="hm">,</span>
+<span class="hk">"status"</span><span class="hm">: </span><span class="hs">"active"</span><span class="hm">,</span>
+<span class="hk">"provision"</span><span class="hm">: {</span>
+  <span class="hk">"type"</span><span class="hm">: </span><span class="hs" id="fhir-prov-type">"permit"</span><span class="hm">,</span>
+  <span class="hk">"period"</span><span class="hm">: { </span><span class="hk">"start"</span><span class="hm">: </span><span class="hs">"2024-01-01"</span><span class="hm">, </span><span class="hk">"end"</span><span class="hm">: </span><span class="hs">"2025-12-31"</span><span class="hm"> },</span>
+  <span class="hk">"actor"</span><span class="hm">: [{ </span><span class="hk">"reference"</span><span class="hm">: { </span><span class="hk">"reference"</span><span class="hm">: </span><span class="hs">"Device/akhester-smart-client"</span><span class="hm"> }}],</span>
+  <span class="hk">"class"</span><span class="hm">: [</span>
+    <span class="hm">{ </span><span class="hk">"code"</span><span class="hm">: </span><span class="hs">"Observation"</span><span class="hm"> },</span>
+    <span class="hm">{ </span><span class="hk">"code"</span><span class="hm">: </span><span class="hs">"Patient"</span><span class="hm"> }</span>
+  <span class="hm">]</span>
+<span class="hm">}</span>
+        </div>
+        <div class="fhir-footer">
+          <span>Evaluated on every FHIR request for this patient · v1.1.0</span>
+          <span class="ff-mono" style="margin-left:auto">ConsentEnforcementInterceptor.java</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- LAB panel -->
+    <div class="sc-panel" id="panel-lab">
+      <div class="sc-heading">
+        <div class="sc-heading-title">Lab workflow</div>
+        <div class="sc-heading-sub">Step through the full order-to-result chain. Click each step to see the FHIR resource that was created and the HTTP exchange that delivered it.</div>
+      </div>
+      
+
+      <!-- Flow steps — each shows real FHIR content -->
+      <div class="flow-row">
+        <div class="flow-step done" id="ls0" onclick="setLabStep(0)">
+          <div class="fs-num">Step 1</div>
+          <div class="fs-label">Lab order</div>
+        </div>
+        <div class="flow-step done" id="ls1" onclick="setLabStep(1)">
+          <div class="fs-num">Step 2</div>
+          <div class="fs-label">Observations</div>
+        </div>
+        <div class="flow-step active" id="ls2" onclick="setLabStep(2)">
+          <div class="fs-num">Step 3</div>
+          <div class="fs-label">DiagnosticReport</div>
+        </div>
+        <div class="flow-step" id="ls3" onclick="setLabStep(3)">
+          <div class="fs-num">Step 4</div>
+          <div class="fs-label">App reads results</div>
+        </div>
+      </div>
+
+      <!-- Step context — updates when user clicks a step -->
+      <div id="lab-step-context" style="padding:18px 22px;background:var(--navy-lt);border-radius:var(--r-lg);border:1.5px solid rgba(27,79,138,.15)">
+        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px" id="lab-step-title">Step 3 — Lab System POSTs DiagnosticReport to HAPI FHIR</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.65;margin-top:6px" id="lab-step-desc">The Lab System has completed the CBC and lipid panel. It creates a DiagnosticReport resource that links the three Observations and includes the clinical conclusion.</div>
+      </div>
+
+      <!-- HTTP action for each step -->
+      <div class="http-panel" id="lab-http">
+        <div class="http-hd">
+          <span class="method" id="lab-method" style="background:var(--teal-lt);color:var(--teal-d)">POST</span>
+          <span class="http-path" id="lab-http-path">/fhir/DiagnosticReport</span>
+          <span class="http-stat s201" id="lab-http-status">201 Created</span>
+          <span class="lat" id="lab-lat">188ms</span>
+        </div>
+        <div class="http-body" id="lab-http-body"></div>
+      </div>
+
+      <!-- Result cards — shown only for step 2 and 3 -->
+      <div class="lab-grid" id="lab-results-grid">
+        <div class="lab-card norm">
+          <div class="lc-name">Hemoglobin</div>
+          <div class="lc-val">13.2</div>
+          <div class="lc-unit">g/dL</div>
+          <div class="lc-loinc">LOINC 718-7</div>
+          <span class="lc-tag">Normal · 12.0 – 16.0 g/dL</span>
+        </div>
+        <div class="lab-card norm">
+          <div class="lc-name">WBC count</div>
+          <div class="lc-val">7.4</div>
+          <div class="lc-unit">×10⁹/L</div>
+          <div class="lc-loinc">LOINC 6690-2</div>
+          <span class="lc-tag">Normal · 4.5 – 11.0</span>
+        </div>
+        <div class="lab-card abn">
+          <div class="lc-name">LDL Cholesterol</div>
+          <div class="lc-val">4.1</div>
+          <div class="lc-unit">mmol/L</div>
+          <div class="lc-loinc">LOINC 13457-7</div>
+          <span class="lc-tag">↑ High · ref &lt; 3.4 mmol/L</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- REFERRAL panel -->
+    <div class="sc-panel" id="panel-ref">
+      <div class="sc-heading">
+        <div class="sc-heading-title">Referral lifecycle</div>
+        <div class="sc-heading-sub">Step through all four stages. Click Next step to advance, or use PATCH accepted / PATCH completed to drive the Task lifecycle directly. Each step writes an AuditEvent.</div>
+      </div>
+      
+
+      <!-- Referral flow — 4 steps, all interactive -->
+      <div class="task-bar" id="ref-bar">
+        <div class="tb-step active" id="tt0" onclick="setRefStep(0)" style="cursor:pointer">
+          <div class="tb-label">ServiceRequest</div>
+          <div class="tb-sub">intent=referral</div>
+          <div class="tb-tick">← current</div>
+        </div>
+        <div class="tb-step" id="tt1" onclick="setRefStep(1)" style="cursor:pointer">
+          <div class="tb-label">Task created</div>
+          <div class="tb-sub">status=requested</div>
+          <div class="tb-tick"></div>
+        </div>
+        <div class="tb-step" id="tt2">
+          <div class="tb-label">Accepted</div>
+          <div class="tb-sub">—</div>
+          <div class="tb-tick"></div>
+        </div>
+        <div class="tb-step" id="tt3">
+          <div class="tb-label">Completed</div>
+          <div class="tb-sub">—</div>
+          <div class="tb-tick"></div>
+        </div>
+      </div>
+
+      <!-- Step context -->
+      <div id="ref-step-context" style="padding:18px 22px;background:var(--navy-lt);border-radius:var(--r-lg);border:1.5px solid rgba(27,79,138,.15)">
+        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px" id="ref-step-title">Step 1 — Create referral ServiceRequest</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.65;margin-top:6px" id="ref-step-desc">Dr. Priya creates a referral to Central Hospital Cardiology for P. Kumar. A ServiceRequest with intent=referral is POSTed to HAPI FHIR. ConsentEnforcementInterceptor checks cross-facility consent before dispatch.</div>
+      </div>
+
+      <!-- HTTP panel for referral steps -->
+      <div class="http-panel" id="ref-http">
+        <div class="http-hd">
+          <span class="method" id="ref-method" style="background:var(--teal-lt);color:var(--teal-d)">POST</span>
+          <span class="http-path" id="ref-http-path">/fhir/ServiceRequest</span>
+          <span class="http-stat s201" id="ref-http-status">201 Created</span>
+          <span class="lat" id="ref-lat">112ms</span>
+        </div>
+        <div class="http-body" id="ref-http-body"></div>
+      </div>
+
+      <!-- PATCH actions — enabled when task exists (step 1+) -->
+      <div class="action-row" id="ref-actions">
+        <button class="btn-primary" id="btn-accept" onclick="patchTask('accepted')" disabled>
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          PATCH → accepted
+        </button>
+        <button class="btn-secondary" id="btn-complete" onclick="patchTask('completed')" disabled>
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><polyline points="20 6 9 17 4 12"/></svg>
+          PATCH → completed
+        </button>
+        <button class="btn-secondary" id="btn-next-ref" onclick="advanceRef()">
+          Next step →
+        </button>
+        <button class="btn-secondary" id="btn-task-reset" onclick="resetTask()" style="margin-left:auto">Reset</button>
+      </div>
+
+      <!-- PATCH HTTP viewer -->
+      <div class="http-panel" id="patch-panel" style="display:none">
+        <div class="http-hd">
+          <span class="method m-patch">PATCH</span>
+          <span class="http-path">/fhir/Task/task-referral-001</span>
+          <span class="http-stat s200">200 OK</span>
+          <span class="lat" id="patch-lat">89ms</span>
+        </div>
+        <div class="http-body" id="patch-body"></div>
+      </div>
+
+      <!-- Task FHIR resource -->
+      <div class="fhir-viewer">
+        <div class="fhir-hd">
+          <span class="fhir-hd-title">FHIR Task resource — current state</span>
+          <span class="fhir-hd-tag" id="task-status-badge">in-progress</span>
+        </div>
+        <div class="fhir-body">
+<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"Task"</span><span class="hm">,</span>
+<span class="hk">"id"</span><span class="hm">: </span><span class="hs">"task-referral-001"</span><span class="hm">,</span>
+<span class="hk">"status"</span><span class="hm">: </span><span class="hs" id="task-status-field">"in-progress"</span><span class="hm">,</span>
+<span class="hk">"intent"</span><span class="hm">: </span><span class="hs">"order"</span><span class="hm">,</span>
+<span class="hk">"focus"</span><span class="hm">: { </span><span class="hk">"reference"</span><span class="hm">: </span><span class="hs">"ServiceRequest/sr-referral-001"</span><span class="hm"> },</span>
+<span class="hk">"for"</span><span class="hm">: { </span><span class="hk">"reference"</span><span class="hm">: </span><span class="hs">"Patient/ePatient-8675309"</span><span class="hm"> },</span>
+<span class="hk">"owner"</span><span class="hm">: { </span><span class="hk">"reference"</span><span class="hm">: </span><span class="hs">"Organization/central-hospital-cardiology"</span><span class="hm"> },</span>
+<span class="hk">"note"</span><span class="hm">: </span><span class="hs" id="task-note-field">"Referral dispatched to Central Hospital Cardiology. Awaiting acceptance."</span>
+        </div>
+        <div class="fhir-footer">
+          <span>IHE Patient Referral Profile · FHIR Task workflow · AuditEvent written on each status change</span>
+        </div>
+      </div>
+
+    </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       AUDIT LOG
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+    <!-- AUDIT panel -->
+    <div class="sc-panel" id="panel-audit">
+      <div class="sc-heading">
+        <div class="sc-heading-title">ATNA audit trail</div>
+        <div class="sc-heading-sub">Every interaction across all scenarios writes a FHIR AuditEvent. Click any row to see the full resource. IHE ATNA · HIPAA §164.312 · GDPR Art.30.</div>
+      </div>
+      <div id="audit">
+    <div class="audit-hd">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke-width:1.8;fill:none;stroke:var(--muted);stroke-linecap:round;flex-shrink:0"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/></svg>
+      <span class="audit-hd-title">ATNA Audit trail</span>
+      <span class="audit-cnt" id="audit-count">3</span>
+      <span class="audit-compliance">IHE ATNA · HIPAA §164.312 · GDPR Art.30</span>
+      <button class="audit-clear" onclick="clearAudit()">Clear session</button>
+    </div>
+    <div class="audit-rows" id="audit-rows"></div>
+  </div>
+    </div>
+
+  
+  <!-- Status bar -->
+  <div id="statusbar">
+  <span class="sb-item"><span class="sb-dot sb-green"></span>auth.sandbox.ajfhir.org</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item"><span class="sb-dot sb-green"></span>fhir.sandbox.ajfhir.org</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">dr.smith · token expires 47m</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item" id="sb-event-count">3 events this session</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item" style="margin-left:auto;color:var(--dim)">AJ FHIR Platform v1.0 · SMART App Launch v2.2 · FHIR R4</span>
+</div>
+</div><!-- /sc-content -->
+</div><!-- /main -->
+</div><!-- /body -->
+
+
+</div><!-- /shell -->
+
+<script>
+/* ── Scenario navigation ─────────────────────────────────────────────────── */
+function showScenario(name) {
+  // Panels
+  ['consent','lab','ref','audit'].forEach(n => {
+    const panel = document.getElementById('panel-' + n);
+    if(panel) panel.className = 'sc-panel' + (n===name ? ' visible' : '');
+  });
+  // Tabs
+  ['consent','lab','ref','audit'].forEach(n => {
+    const tab = document.getElementById('stab-' + n);
+    if(tab) tab.className = 'sc-tab' + (n===name ? ' active' : '');
+  });
+  // Sidebar
+  ['consent','lab','ref'].forEach(n => {
+    const item = document.getElementById('snav-' + n);
+    if(item) item.className = 'nav-item' + (n===name ? ' sc-active' : '');
+  });
+}
+
+/* ── Override renderAudit to also update tab/nav badge ─────────────────── */
+const _origRenderAudit = typeof renderAudit !== 'undefined' ? renderAudit : null;
+
+/* ── All existing scenario JS ────────────────────────────────────────────── */
+
+'use strict';
+
+/* ═══ AUDIT LOG ══════════════════════════════════════════ */
+const events = [];
+
+function ts(){
+  return new Date().toTimeString().slice(0,8);
+}
+
+function addEvent(type,cls,desc,outcome,ocls){
+  events.push({ts:ts(),type,cls,desc,outcome,ocls});
+  renderAudit();
+}
+
+function renderAudit(){
+  const rows = document.getElementById('audit-rows');
+  const cnt = document.getElementById('audit-count');
+  const navCnt = document.getElementById('audit-nav-count');
+  const sbCnt = document.getElementById('sb-event-count');
+  cnt.textContent = events.length;
+  navCnt.textContent = events.length;
+  sbCnt.textContent = events.length + ' event' + (events.length!==1?'s':'') + ' this session';
+  if(events.length===0){
+    rows.innerHTML = '<div class="audit-empty">No audit events yet — interact with a scenario above</div>';
+    return;
+  }
+  rows.innerHTML = [...events].slice().reverse().map((e,ri) => {
+    const idx = events.length - 1 - ri;
+    return `<div class="audit-row" onclick="toggleAuditDetail(${idx})" style="cursor:pointer" title="Click to see FHIR AuditEvent">
+      <span class="ar-time">${e.ts}</span>
+      <span class="ar-type ${e.cls}">${e.type}</span>
+      <span class="ar-desc">${e.desc}</span>
+      <span class="ar-out ${e.ocls}">${e.outcome}</span>
+    </div>
+    <div class="audit-detail" id="ad-${idx}" style="display:none;padding:10px 22px 12px;background:var(--surface2);border-bottom:1px solid var(--border-lt)">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">FHIR AuditEvent resource</div>
+      <div style="font-family:var(--mono);font-size:12.5px;line-height:1.8;color:var(--dark)">${buildAuditFHIR(e)}</div>
+    </div>`;
+  }).join('');
+}
+
+function clearAudit(){
+  events.length = 0;
+  renderAudit();
+}
+
+/* ═══ UI HELPERS ═════════════════════════════════════════ */
+function toggleSc(id){
+  document.getElementById(id).classList.toggle('open');
+}
+function scrollTo(id){
+  document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'});
+}
+function copyFHIR(id){
+  navigator.clipboard.writeText(document.getElementById(id).innerText)
+    .then(()=>{
+      event.currentTarget.textContent='Copied!';
+      setTimeout(()=>event.currentTarget.textContent='Copy JSON',1600);
+    });
+}
+
+/* ═══ CONSENT SCENARIO ═══════════════════════════════════
+   Exact port of ConsentEnforcementInterceptor.java
+   ════════════════════════════════════════════════════════ */
+let consentType = 'permit';
+const CONSENT_CLASS = ['Observation','Patient'];
+
+function evaluateConsent(type, resource){
+  if(type==='deny')
+    return {pass:false, reason:`provision.type=deny · consent withdrawn · GET /${resource} blocked`};
+  if(!CONSENT_CLASS.includes(resource))
+    return {pass:false, reason:`${resource} not in provision.class · permitted: ${CONSENT_CLASS.join(', ')}`};
+  return {pass:true, reason:`provision.type=permit · ${resource} in provision.class · status=active · period valid`};
+}
+
+function setConsent(t){
+  consentType = t;
+  document.getElementById('btn-permit').className = 'seg-btn' + (t==='permit'?' sel pass':'');
+  document.getElementById('btn-deny').className   = 'seg-btn' + (t==='deny'  ?' sel deny':'');
+  document.getElementById('fhir-prov-type').textContent = '"'+t+'"';
+  const tag = document.getElementById('pt-consent-tag');
+  if(t==='permit'){
+    tag.textContent='Consent active';
+    tag.style.cssText='background:var(--teal-lt);color:var(--teal-d);border:1px solid rgba(13,122,110,.2)';
+  } else {
+    tag.textContent='Consent denied';
+    tag.style.cssText='background:var(--block-lt);color:var(--block);border:1px solid var(--block-b)';
+  }
+  runConsent();
+}
+
+function runConsent(){
+  const resource = document.getElementById('consent-res').value;
+  const result = evaluateConsent(consentType, resource);
+  const lat = 80 + Math.floor(Math.random()*120);
+  const path = `/fhir/${resource}?patient=ePatient-8675309`;
+
+  /* Verdict */
+  const v = document.getElementById('consent-verdict');
+  v.className = 'verdict ' + (result.pass ? 'pass' : 'block');
+  v.querySelector('.v-icon').textContent = result.pass ? '✓' : '✗';
+  v.querySelector('.v-title').textContent = result.pass
+    ? '200 OK — Request permitted'
+    : '403 Forbidden — Request blocked';
+  document.getElementById('consent-sub').textContent = result.reason;
+
+  /* HTTP */
+  const stat = document.getElementById('consent-status');
+  stat.textContent = result.pass ? '200 OK' : '403 Forbidden';
+  stat.className = 'http-stat ' + (result.pass ? 's200' : 's-403');
+  // fix: add class s403 for red
+  if(!result.pass) stat.className = 'http-stat';
+  stat.style.cssText = result.pass
+    ? 'background:var(--pass-lt);color:var(--pass)'
+    : 'background:var(--block-lt);color:var(--block)';
+  document.getElementById('consent-path').textContent = path;
+  document.getElementById('consent-req-path').textContent = path;
+  document.getElementById('consent-lat').textContent = lat+'ms';
+
+  /* Response body */
+  const resp = document.getElementById('consent-resp');
+  resp.innerHTML = result.pass
+    ? `<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"Bundle"</span><span class="hm">,</span>
+<span class="hk">"type"</span><span class="hm">: </span><span class="hs">"searchset"</span><span class="hm">,</span>
+<span class="hk">"total"</span><span class="hm">: </span><span class="hn">3</span><span class="hm">,</span>
+<span class="hk">"entry"</span><span class="hm">: [{ </span><span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"${resource}"</span><span class="hm">, </span><span class="hk">"id"</span><span class="hm">: </span><span class="hs">"${resource.toLowerCase()}-001"</span><span class="hm"> }, …]</span>`
+    : `<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"OperationOutcome"</span><span class="hm">,</span>
+<span class="hk">"issue"</span><span class="hm">: [{</span>
+  <span class="hk">"severity"</span><span class="hm">: </span><span class="hs">"error"</span><span class="hm">,</span>
+  <span class="hk">"code"</span><span class="hm">: </span><span class="hs">"forbidden"</span><span class="hm">,</span>
+  <span class="hk">"diagnostics"</span><span class="hm">: </span><span class="hs">"ConsentEnforcementInterceptor: ${result.reason}"</span>
+<span class="hm">}]</span>`;
+
+  addEvent(
+    'Consent', 'tc-consent',
+    result.pass
+      ? `GET /${resource} permitted · provision.type=${consentType} · class includes ${resource}`
+      : `GET /${resource} blocked · ${result.reason}`,
+    result.pass ? 'PASS' : 'BLOCK',
+    result.pass ? 'ao-ok' : 'ao-blk'
+  );
+}
+
+/* ═══ LAB SCENARIO ═══════════════════════════════════════ */
+const LAB_STEPS = [{"title": "Step 1 \u2014 Dr. Priya orders CBC + lipid panel", "desc": "A ServiceRequest is POSTed to HAPI FHIR with LOINC 58410-2 (CBC). SmartScopeInterceptor checks patient/ServiceRequest.c scope before the resource is written.", "method": "POST", "path": "/fhir/ServiceRequest", "status": "201 Created", "lat": "112", "body": "<span class=\"ht\">\"resourceType\"</span><span class=\"hm\">: </span><span class=\"hs\">\"ServiceRequest\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"id\"</span><span class=\"hm\">: </span><span class=\"hs\">\"sr-lab-001\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"status\"</span><span class=\"hm\">: </span><span class=\"hs\">\"active\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"intent\"</span><span class=\"hm\">: </span><span class=\"hs\">\"order\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"code\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"coding\"</span><span class=\"hm\">: [{ </span><span class=\"hk\">\"system\"</span><span class=\"hm\">: </span><span class=\"hs\">\"http://loinc.org\"</span><span class=\"hm\">, </span><span class=\"hk\">\"code\"</span><span class=\"hm\">: </span><span class=\"hs\">\"58410-2\"</span><span class=\"hm\">, </span><span class=\"hk\">\"display\"</span><span class=\"hm\">: </span><span class=\"hs\">\"CBC panel\"</span><span class=\"hm\"> }]},</span>\n<span class=\"hk\">\"subject\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Patient/ePatient-8675309\"</span><span class=\"hm\"> }</span>", "show_results": false}, {"title": "Step 2 \u2014 Lab System POSTs 3 Observations to HAPI FHIR", "desc": "The Lab System completes the tests and POSTs Observation resources. Each references the ServiceRequest via basedOn. LOINC codes identify each analyte.", "method": "POST", "path": "/fhir/Observation", "status": "201 Created", "lat": "94", "body": "<span class=\"ht\">\"resourceType\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Observation\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"id\"</span><span class=\"hm\">: </span><span class=\"hs\">\"obs-ldl-001\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"status\"</span><span class=\"hm\">: </span><span class=\"hs\">\"final\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"basedOn\"</span><span class=\"hm\">: [{ </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"ServiceRequest/sr-lab-001\"</span><span class=\"hm\"> }],</span>\n<span class=\"hk\">\"code\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"coding\"</span><span class=\"hm\">: [{ </span><span class=\"hk\">\"system\"</span><span class=\"hm\">: </span><span class=\"hs\">\"http://loinc.org\"</span><span class=\"hm\">, </span><span class=\"hk\">\"code\"</span><span class=\"hm\">: </span><span class=\"hs\">\"13457-7\"</span><span class=\"hm\">, </span><span class=\"hk\">\"display\"</span><span class=\"hm\">: </span><span class=\"hs\">\"LDL Cholesterol\"</span><span class=\"hm\"> }]},</span>\n<span class=\"hk\">\"valueQuantity\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"value\"</span><span class=\"hm\">: </span><span class=\"hn\">4.1</span><span class=\"hm\">, </span><span class=\"hk\">\"unit\"</span><span class=\"hm\">: </span><span class=\"hs\">\"mmol/L\"</span><span class=\"hm\"> },</span>\n<span class=\"hk\">\"interpretation\"</span><span class=\"hm\">: [{ </span><span class=\"hk\">\"coding\"</span><span class=\"hm\">: [{ </span><span class=\"hk\">\"code\"</span><span class=\"hm\">: </span><span class=\"hs\">\"H\"</span><span class=\"hm\">, </span><span class=\"hk\">\"display\"</span><span class=\"hm\">: </span><span class=\"hs\">\"High\"</span><span class=\"hm\"> }]}]</span>\n<span class=\"hm\">+ 2 more (Hb, WBC)</span>", "show_results": true}, {"title": "Step 3 \u2014 Lab System POSTs DiagnosticReport linking all results", "desc": "The DiagnosticReport wraps the three Observations. It references the original ServiceRequest via basedOn, creating the complete order-to-result chain in FHIR.", "method": "POST", "path": "/fhir/DiagnosticReport", "status": "201 Created", "lat": "188", "body": "<span class=\"ht\">\"resourceType\"</span><span class=\"hm\">: </span><span class=\"hs\">\"DiagnosticReport\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"id\"</span><span class=\"hm\">: </span><span class=\"hs\">\"dr-lab-001\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"basedOn\"</span><span class=\"hm\">: [{ </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"ServiceRequest/sr-lab-001\"</span><span class=\"hm\"> }],</span>\n<span class=\"hk\">\"result\"</span><span class=\"hm\">: [</span>\n  <span class=\"hm\">{ </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Observation/obs-hb-001\"</span><span class=\"hm\"> },</span>\n  <span class=\"hm\">{ </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Observation/obs-wbc-001\"</span><span class=\"hm\"> },</span>\n  <span class=\"hm\">{ </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Observation/obs-ldl-001\"</span><span class=\"hm\"> }</span>\n<span class=\"hm\">],</span>\n<span class=\"hk\">\"conclusion\"</span><span class=\"hm\">: </span><span class=\"hs\">\"LDL elevated: 4.1 mmol/L (ref &lt;3.4). CVD risk assessment recommended.\"</span>", "show_results": true}, {"title": "Step 4 \u2014 SMART app reads DiagnosticReport", "desc": "The CardioApp queries GET /fhir/DiagnosticReport. SmartScopeInterceptor validates patient/Observation.rs scope. ConsentEnforcementInterceptor verifies Observation is in provision.class. Both pass \u2014 data returned.", "method": "GET", "path": "/fhir/DiagnosticReport?patient=ePatient-8675309", "status": "200 OK", "lat": "76", "body": "<span class=\"ht\">\"resourceType\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Bundle\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"total\"</span><span class=\"hm\">: </span><span class=\"hn\">1</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"entry\"</span><span class=\"hm\">: [{ </span><span class=\"ht\">\"resourceType\"</span><span class=\"hm\">: </span><span class=\"hs\">\"DiagnosticReport\"</span><span class=\"hm\">,</span>\n  <span class=\"hk\">\"conclusion\"</span><span class=\"hm\">: </span><span class=\"hs\">\"LDL elevated: 4.1 mmol/L\"</span><span class=\"hm\"> }]</span>\n<span class=\"hm\">SmartScopeInterceptor: patient/Observation.rs \u2713</span>\n<span class=\"hm\">ConsentEnforcementInterceptor: Observation in class \u2713</span>", "show_results": true}];
+let labStepIdx = 2;
+
+function setLabStep(n){
+  labStepIdx = n;
+  ['ls0','ls1','ls2','ls3'].forEach((id,i)=>{
+    document.getElementById(id).className =
+      'flow-step' + (i<n?' done':i===n?' active':'');
+  });
+  const step = LAB_STEPS[n];
+  document.getElementById('lab-step-title').textContent = step.title;
+  document.getElementById('lab-step-desc').textContent  = step.desc;
+
+  const mEl = document.getElementById('lab-method');
+  mEl.textContent = step.method;
+  mEl.style.cssText = step.method==='GET'
+    ? 'background:var(--navy-lt);color:var(--navy)'
+    : 'background:var(--teal-lt);color:var(--teal-d)';
+  document.getElementById('lab-http-path').textContent = step.path;
+
+  const statEl = document.getElementById('lab-http-status');
+  statEl.textContent = step.status;
+  statEl.style.cssText = step.status.startsWith('200')
+    ? 'background:var(--pass-lt);color:var(--pass)'
+    : 'background:var(--navy-lt);color:var(--navy)';
+  document.getElementById('lab-lat').textContent = step.lat + 'ms';
+  document.getElementById('lab-http-body').innerHTML = step.body;
+
+  const grid = document.getElementById('lab-results-grid');
+  grid.style.display = step.show_results ? '' : 'none';
+
+  if(n===0){
+    addEvent('Lab','tc-lab','POST ServiceRequest CBC+Lipid panel · sr-lab-001 created · LOINC 58410-2','201','ao-info');
+  } else if(n===1){
+    addEvent('Lab','tc-lab','POST Observation × 3 — Hb 13.2 g/dL ✓ · WBC 7.4 ✓ · LDL 4.1 mmol/L ↑','201','ao-info');
+  } else if(n===2){
+    addEvent('Lab','tc-lab','POST DiagnosticReport dr-lab-001 · links 3 Observations · conclusion: LDL elevated','201','ao-info');
+  } else if(n===3){
+    addEvent('Lab','tc-lab','GET DiagnosticReport · SmartScopeInterceptor ✓ · ConsentEnforcementInterceptor ✓','200','ao-ok');
+  }
+}
+
+/* ═══ REFERRAL SCENARIO ══════════════════════════════════ */
+const REF_STEPS = [{"title": "Step 1 \u2014 POST ServiceRequest (intent=referral)", "desc": "Dr. Priya creates a cardiology referral. A ServiceRequest with intent=referral is POSTed to HAPI FHIR. ConsentEnforcementInterceptor checks whether cross-facility sharing is permitted.", "method": "POST", "path": "/fhir/ServiceRequest", "status": "201 Created", "lat": "112", "body": "<span class=\"ht\">\"resourceType\"</span><span class=\"hm\">: </span><span class=\"hs\">\"ServiceRequest\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"id\"</span><span class=\"hm\">: </span><span class=\"hs\">\"sr-referral-001\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"intent\"</span><span class=\"hm\">: </span><span class=\"hs\">\"referral\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"code\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"coding\"</span><span class=\"hm\">: [{ </span><span class=\"hk\">\"code\"</span><span class=\"hm\">: </span><span class=\"hs\">\"306206005\"</span><span class=\"hm\">, </span><span class=\"hk\">\"display\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Referral to cardiology\"</span><span class=\"hm\"> }]},</span>\n<span class=\"hk\">\"subject\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Patient/ePatient-8675309\"</span><span class=\"hm\"> },</span>\n<span class=\"hm\">\u2190 ConsentEnforcementInterceptor: cross-facility consent \u2713</span>"}, {"title": "Step 2 \u2014 POST Task (status=requested)", "desc": "The Referral Module creates a FHIR Task linking to the ServiceRequest. The Task owner is set to Central Hospital Cardiology. Status: requested.", "method": "POST", "path": "/fhir/Task", "status": "201 Created", "lat": "98", "body": "<span class=\"ht\">\"resourceType\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Task\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"id\"</span><span class=\"hm\">: </span><span class=\"hs\">\"task-referral-001\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"status\"</span><span class=\"hm\">: </span><span class=\"hs\">\"requested\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"intent\"</span><span class=\"hm\">: </span><span class=\"hs\">\"order\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"focus\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"ServiceRequest/sr-referral-001\"</span><span class=\"hm\"> },</span>\n<span class=\"hk\">\"for\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Patient/ePatient-8675309\"</span><span class=\"hm\"> },</span>\n<span class=\"hk\">\"owner\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Organization/central-hospital-cardiology\"</span><span class=\"hm\"> }</span>"}, {"title": "Step 3 \u2014 PATCH Task \u2192 accepted", "desc": "Central Hospital Cardiology accepts the referral. A JSON-Patch request updates Task.status from requested to accepted. An appointment is confirmed.", "method": "PATCH", "path": "/fhir/Task/task-referral-001", "status": "200 OK", "lat": "89", "body": "<span class=\"hm\">Request: [{</span> <span class=\"hk\">\"op\"</span><span class=\"hm\">:</span><span class=\"hs\">\"replace\"</span><span class=\"hm\">, </span><span class=\"hk\">\"path\"</span><span class=\"hm\">:</span><span class=\"hs\">\"/status\"</span><span class=\"hm\">, </span><span class=\"hk\">\"value\"</span><span class=\"hm\">:</span><span class=\"hs\">\"accepted\"</span><span class=\"hm\"> }]</span>\n<span class=\"hm\">\u2190 200 OK</span>\n<span class=\"hk\">\"status\"</span><span class=\"hm\">: </span><span class=\"hs\">\"accepted\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"note\"</span><span class=\"hm\">: </span><span class=\"hs\">\"Appointment confirmed: 2025-02-01. Cardiology team notified.\"</span>"}, {"title": "Step 4 \u2014 PATCH Task \u2192 completed", "desc": "The specialist completes the consultation. Task.status is updated to completed. The Task.output field references the specialist's DiagnosticReport, closing the referral loop.", "method": "PATCH", "path": "/fhir/Task/task-referral-001", "status": "200 OK", "lat": "76", "body": "<span class=\"hm\">Request: [{</span> <span class=\"hk\">\"op\"</span><span class=\"hm\">:</span><span class=\"hs\">\"replace\"</span><span class=\"hm\">, </span><span class=\"hk\">\"path\"</span><span class=\"hm\">:</span><span class=\"hs\">\"/status\"</span><span class=\"hm\">, </span><span class=\"hk\">\"value\"</span><span class=\"hm\">:</span><span class=\"hs\">\"completed\"</span><span class=\"hm\"> }]</span>\n<span class=\"hm\">\u2190 200 OK</span>\n<span class=\"hk\">\"status\"</span><span class=\"hm\">: </span><span class=\"hs\">\"completed\"</span><span class=\"hm\">,</span>\n<span class=\"hk\">\"output\"</span><span class=\"hm\">: [{ </span><span class=\"hk\">\"valueReference\"</span><span class=\"hm\">: { </span><span class=\"hk\">\"reference\"</span><span class=\"hm\">: </span><span class=\"hs\">\"DiagnosticReport/dr-cardiology-001\"</span><span class=\"hm\"> }}]</span>"}];
+const REF_BAR_LABELS = ["ServiceRequest", "Task created", "Accepted", "Completed"];
+const REF_BAR_SUBS   = ["intent=referral", "status=requested", "\u2014", "\u2014"];
+let refStep = 0;
+
+function setRefStep(n){
+  refStep = n;
+  for(let i=0;i<4;i++){
+    const el = document.getElementById('tt'+i);
+    el.className = 'tb-step'+(i<n?' done':i===n?' active':'');
+    el.querySelector('.tb-label').textContent = REF_BAR_LABELS[i];
+    el.querySelector('.tb-sub').textContent   = i<n ? '✓ done' : i===n ? REF_BAR_SUBS[i] : REF_BAR_SUBS[i];
+    el.querySelector('.tb-tick').textContent  = i<n ? '✓ done' : i===n ? '← current' : '';
+  }
+  const step = REF_STEPS[n];
+  document.getElementById('ref-step-title').textContent = step.title;
+  document.getElementById('ref-step-desc').textContent  = step.desc;
+
+  const mEl = document.getElementById('ref-method');
+  mEl.textContent = step.method;
+  mEl.style.cssText = step.method==='GET'
+    ? 'background:var(--navy-lt);color:var(--navy)'
+    : step.method==='PATCH'
+    ? 'background:var(--warn-lt);color:var(--warn)'
+    : 'background:var(--teal-lt);color:var(--teal-d)';
+  document.getElementById('ref-http-path').textContent = step.path;
+  const statEl = document.getElementById('ref-http-status');
+  statEl.textContent = step.status;
+  statEl.style.cssText = step.status.startsWith('200')
+    ? 'background:var(--pass-lt);color:var(--pass)'
+    : 'background:var(--navy-lt);color:var(--navy)';
+  document.getElementById('ref-lat').textContent = step.lat + 'ms';
+  document.getElementById('ref-http-body').innerHTML = step.body;
+
+  /* Update task FHIR body */
+  const taskStatuses = ['requested','requested','accepted','completed'];
+  const taskNotes = [
+    'Referral to Central Hospital Cardiology created.',
+    'Task dispatched to Central Hospital Cardiology. Awaiting acceptance.',
+    'Appointment confirmed: 2025-02-01. Cardiology team notified.',
+    'Consultation complete. Report: DiagnosticReport/dr-cardiology-001.'
+  ];
+  const ts = taskStatuses[n];
+  document.getElementById('task-status-field').textContent = '"'+ts+'"';
+  document.getElementById('task-status-badge').textContent = ts;
+  document.getElementById('task-note-field').textContent = '"'+taskNotes[n]+'"';
+
+  /* Button states */
+  document.getElementById('btn-accept').disabled  = n<1||n>=2;
+  document.getElementById('btn-complete').disabled = n<2||n>=3;
+  document.getElementById('btn-next-ref').disabled = n>=3;
+  document.getElementById('btn-next-ref').textContent = n>=3 ? 'Complete ✓' : 'Next step →';
+
+  /* Audit */
+  const auditMap = [
+    ['Referral','tc-ref','POST ServiceRequest sr-referral-001 · intent=referral · consent check ✓','201','ao-info'],
+    ['Referral','tc-ref','POST Task task-referral-001 · status=requested · dispatched to Central Hospital','201','ao-info'],
+    ['Referral','tc-ref','PATCH Task → accepted · appointment confirmed 2025-02-01','200','ao-ok'],
+    ['Referral','tc-ref','PATCH Task → completed · output: DiagnosticReport/dr-cardiology-001','200','ao-ok'],
+  ];
+  if(auditMap[n]) addEvent(...auditMap[n]);
+}
+
+function advanceRef(){
+  if(refStep<3) setRefStep(refStep+1);
+}
+
+function patchTask(newStatus){
+  if(newStatus==='accepted' && refStep===1) setRefStep(2);
+  else if(newStatus==='completed' && refStep===2) setRefStep(3);
+}
+
+function resetTask(){
+  refStep=0;
+  setRefStep(0);
+  document.getElementById('ref-http').style.display='';
+}
+
+/* ═══ AUDIT DETAIL ══════════════════════════════════════ */
+function toggleAuditDetail(idx){
+  const el = document.getElementById('ad-'+idx);
+  if(!el) return;
+  el.style.display = el.style.display==='none' ? '' : 'none';
+  if(el.style.display !== 'none' && !el.innerHTML.trim()){
+    const e = events[idx];
+    el.querySelector('[style*="font-family"]').innerHTML = buildAuditFHIR(e);
+  }
+}
+
+function buildAuditFHIR(e){
+  const ts = e.ts;
+  return `<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"AuditEvent"</span><span class="hm">,</span>
+<span class="hk">"type"</span><span class="hm">: { </span><span class="hk">"code"</span><span class="hm">: </span><span class="hs">"110112"</span><span class="hm">, </span><span class="hk">"display"</span><span class="hm">: </span><span class="hs">"Query"</span><span class="hm"> },</span>
+<span class="hk">"recorded"</span><span class="hm">: </span><span class="hs">"2025-01-15T${ts}.000Z"</span><span class="hm">,</span>
+<span class="hk">"outcome"</span><span class="hm">: </span><span class="hs">"${e.outcome}"</span><span class="hm">,</span>
+<span class="hk">"agent"</span><span class="hm">: [{ </span><span class="hk">"who"</span><span class="hm">: { </span><span class="hk">"reference"</span><span class="hm">: </span><span class="hs">"Practitioner/dr-smith"</span><span class="hm"> }, </span><span class="hk">"requestor"</span><span class="hm">: </span><span style="color:var(--syn-b)">true</span><span class="hm"> }],</span>
+<span class="hk">"source"</span><span class="hm">: { </span><span class="hk">"observer"</span><span class="hm">: { </span><span class="hk">"reference"</span><span class="hm">: </span><span class="hs">"Device/fhir-sandbox"</span><span class="hm"> }},</span>
+<span class="hk">"entity"</span><span class="hm">: [{ </span><span class="hk">"what"</span><span class="hm">: { </span><span class="hk">"display"</span><span class="hm">: </span><span class="hs">"${e.desc}"</span><span class="hm"> }}]</span>`;
+}
+
+/* ═══ INIT ═══════════════════════════════════════════════ */
+/* Pre-seed auth events — show audit trail concept on load */
+setTimeout(()=>{
+  addEvent('Auth','tc-auth',
+    'dr.smith authenticated · PKCE S256 · RS256 JWT issued · scope granted',
+    'PASS','ao-ok');
+  addEvent('FHIR','tc-fhir',
+    'GET /fhir/Patient/ePatient-8675309 · patient/Patient.rs · SmartScopeInterceptor ✓',
+    '200','ao-ok');
+  addEvent('Lab','tc-lab',
+    'POST ServiceRequest CBC+Lipid · sr-lab-001 created · LOINC 58410-2',
+    '201','ao-info');
+},300);
+
+/* Initialise all scenarios */
+runConsent();         // consent scenario — default permit + Observation
+setLabStep(2);        // lab — show DiagnosticReport step by default
+setRefStep(0);        // referral — start at step 1: ServiceRequest
+
+
+/* ── Patch renderAudit to update all count badges ───────────────────────── */
+const _baseRenderAudit = renderAudit;
+renderAudit = function() {
+  _baseRenderAudit();
+  const n = events.length;
+  ['audit-nav-count','audit-tab-count'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = n;
+  });
+  const sb = document.getElementById('sb-event-count');
+  if(sb) sb.textContent = n + ' event' + (n!==1?'s':'') + ' this session';
+};
+
+/* ── Init ── */
+runConsent();
+setLabStep(2);
+setRefStep(0);
+</script>
+</body>
+</html>

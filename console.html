@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>API Console — AJ FHIR Sandbox</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --navy:#1B4F8A;--navy-d:#133A6A;--navy-lt:#EBF2FA;
+  --teal:#0D7A6E;--teal-d:#0A6058;--teal-lt:#E6F4F2;--teal-mid:#1A9E90;
+  --dark:#0D1F33;--text:#2C5070;--muted:#3D6A8A;--dim:#5A8AA8;
+  --border:#B8D4E8;--border-lt:#DDE8F4;--bg:#F4F7FB;--surface:#fff;--surface2:#F8FAFD;
+  --pass:#0A6058;--pass-lt:#E6F4F0;--pass-b:rgba(10,96,80,.2);
+  --block:#B91C1C;--block-lt:#FEF2F2;--block-b:rgba(185,28,28,.18);
+  --warn:#854D0E;--warn-lt:#FEF9EC;--warn-b:rgba(133,77,14,.2);
+  --syn-k:#0550AE;--syn-s:#0A5A50;--syn-n:#854D0E;--syn-t:#5B21B6;--syn-m:#5A7A96;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  --r:12px;--r-lg:16px;--r-xl:20px;
+  --shadow:0 1px 4px rgba(27,79,138,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 8px 30px rgba(27,79,138,.1),0 2px 6px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--sans);font-size:16px;color:var(--dark);background:var(--bg);}
+a{text-decoration:none;color:inherit}
+
+.nav{position:sticky;top:0;z-index:50;background:#F0F7FF;border-bottom:1px solid var(--border);}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 1.5rem;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{position:relative;width:36px;height:36px;flex-shrink:0;}
+.logo-circle{width:36px;height:36px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;}
+.logo-circle span{color:white;font-size:11px;font-weight:800;letter-spacing:-.5px;}
+.logo-arc{position:absolute;top:0;left:0;width:36px;height:36px;}
+.logo-text{display:flex;align-items:baseline;gap:6px;}
+.logo-fhir{font-size:18px;font-weight:800;color:var(--dark);letter-spacing:-.5px;}
+.logo-sub{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;border-left:1px solid var(--border);padding-left:6px;}
+.nav-links{display:flex;align-items:center;gap:2px;}
+.nl{font-size:14px;font-weight:500;color:var(--muted);padding:6px 12px;border-radius:8px;transition:all .12s;}
+.nl:hover{background:#E0EFFE;color:var(--navy);}
+.nl.active{background:#E0EFFE;color:var(--navy);font-weight:600;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.env-pill{font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:var(--teal-lt);color:var(--teal-d);border:1px solid rgba(10,96,80,.2);display:flex;align-items:center;gap:5px;}
+.env-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+.back-btn{font-size:13px;font-weight:500;color:var(--muted);padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:white;transition:all .12s;}
+.back-btn:hover{border-color:var(--navy);color:var(--navy);}
+
+/* Layout */
+#shell{display:flex;flex-direction:column;height:calc(100vh - 64px)}
+#body{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* Endpoint browser */
+#endpoint-nav{width:220px;flex-shrink:0;background:var(--surface);border-right:1.5px solid var(--border-lt);overflow-y:auto;padding:14px 0}
+#endpoint-nav::-webkit-scrollbar{width:4px}
+#endpoint-nav::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.en-section{padding:0 12px;margin-bottom:12px}
+.en-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);padding:0 10px;margin-bottom:8px}
+.en-item{font-size:14px;font-weight:500;color:var(--muted);padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:all .12s;margin-bottom:1px}
+.en-item:hover{background:var(--navy-lt);color:var(--navy)}
+.en-item.active{background:var(--navy-lt);color:var(--navy);font-weight:600}
+.en-item .method-tag{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;font-family:var(--mono);flex-shrink:0}
+.get-tag{background:var(--navy-lt);color:var(--navy)}
+.post-tag{background:var(--teal-lt);color:var(--teal-d)}
+.patch-tag{background:var(--warn-lt);color:var(--warn)}
+.en-divider{height:1px;background:var(--border-lt);margin:6px 12px}
+
+/* Request builder */
+#request-panel{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border-right:1.5px solid var(--border-lt)}
+
+.panel-hd{height:48px;background:var(--surface2);border-bottom:1.5px solid var(--border-lt);display:flex;align-items:center;padding:0 18px;gap:10px;flex-shrink:0}
+.panel-hd-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+
+.req-bar{padding:14px 18px;background:var(--surface);border-bottom:1px solid var(--border-lt);display:flex;gap:10px;align-items:center;flex-shrink:0}
+.method-sel{font-size:14px;font-weight:700;font-family:var(--mono);padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);cursor:pointer;color:var(--navy);outline:none}
+.method-sel:focus{border-color:var(--navy)}
+.path-input{flex:1;font-size:14px;font-family:var(--mono);padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--dark);outline:none;transition:border-color .14s}
+.path-input:focus{border-color:var(--navy);outline:3px solid rgba(27,79,138,.1);outline-offset:-1px}
+.send-btn{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:white;font-size:15px;font-weight:600;padding:11px 22px;border-radius:var(--r);border:none;cursor:pointer;font-family:var(--sans);transition:background .12s;white-space:nowrap}
+.send-btn:hover{background:var(--navy-d)}
+.send-btn.loading{background:var(--teal-d);pointer-events:none}
+
+/* Scope check bar */
+.scope-bar{padding:12px 18px;border-bottom:1px solid var(--border-lt);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--surface)}
+.scope-label{font-size:12px;font-weight:600;color:var(--muted);flex-shrink:0}
+.scope-input{flex:1;font-size:14px;font-family:var(--mono);padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--dark);outline:none;transition:border-color .14s}
+.scope-input:focus{border-color:var(--navy)}
+.scope-verdict{font-size:13px;font-weight:700;padding:5px 13px;border-radius:20px;font-family:var(--mono);flex-shrink:0}
+.sv-pass{background:var(--pass-lt);color:var(--pass)}
+.sv-block{background:var(--block-lt);color:var(--block)}
+.sv-none{background:var(--surface2);color:var(--muted)}
+
+/* Body editor area */
+.body-area{flex:1;padding:18px 20px;overflow-y:auto;min-height:0}
+.body-area::-webkit-scrollbar{width:4px}
+.body-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.body-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+textarea.body-editor{width:100%;min-height:180px;font-size:13px;font-family:var(--mono);padding:12px;border:1.5px solid var(--border);border-radius:var(--r-lg);background:var(--surface2);color:var(--dark);resize:vertical;outline:none;line-height:1.7;transition:border-color .14s}
+textarea.body-editor:focus{border-color:var(--navy);background:var(--surface)}
+
+/* Response panel */
+#response-panel{width:420px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:var(--surface)}
+.resp-status-bar{height:40px;border-bottom:1px solid var(--border-lt);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;background:var(--surface2)}
+.resp-stat{font-size:13px;font-weight:700;font-family:var(--mono);padding:3px 10px;border-radius:6px}
+.rs200{background:var(--pass-lt);color:var(--pass)}
+.rs403{background:var(--block-lt);color:var(--block)}
+.rs201{background:var(--navy-lt);color:var(--navy)}
+.rs-lat{font-size:12px;color:var(--dim);font-family:var(--mono)}
+.resp-tabs{display:flex;border-bottom:1px solid var(--border-lt);flex-shrink:0}
+.rtab{font-size:12px;font-weight:500;padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);transition:all .12s}
+.rtab.active{color:var(--navy);border-bottom-color:var(--navy)}
+.resp-body{flex:1;overflow-y:auto;padding:20px 22px;font-family:var(--mono);font-size:13.5px;line-height:1.9;background:var(--surface)}
+.resp-body::-webkit-scrollbar{width:4px}
+.resp-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.placeholder{color:var(--dim);font-size:14px;font-family:var(--sans);padding:24px 0}
+.hk{color:var(--syn-k)}.hs{color:var(--syn-s)}.hn{color:var(--syn-n)}.ht{color:var(--syn-t);font-weight:600}.hm{color:var(--syn-m)}
+
+/* Status bar */
+#statusbar{height:32px;background:var(--surface);border-top:1.5px solid var(--border-lt);display:flex;align-items:center;padding:0 18px;gap:12px;flex-shrink:0}
+.sb-item{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.sb-dot{width:5px;height:5px;border-radius:50%}
+.sb-g{background:#22C55E}
+.sb-sep{height:12px;width:1px;background:var(--border-lt);margin:0 2px}
+
+/* ─── Responsive: nav ─── */
+@media(max-width:768px){
+  .nav-links{display:none}
+  .back-btn{display:none}
+  .env-pill{font-size:11px;padding:4px 10px}
+  .logo-fhir{font-size:15px}
+  .logo-sub{display:none}
+}
+
+
+/* ─── Responsive: console ─── */
+@media(max-width:1024px){
+  #endpoint-nav{width:180px}
+  #response-panel{width:360px}
+}
+@media(max-width:900px){
+  #endpoint-nav{width:160px}
+  #response-panel{width:300px}
+}
+@media(max-width:768px){
+  #shell{height:auto;min-height:calc(100vh - 64px)}
+  #body{flex-direction:column;overflow:visible;height:auto}
+  #endpoint-nav{
+    width:100%;height:auto;border-right:none;
+    border-bottom:1.5px solid var(--border-lt);
+    display:flex;flex-direction:row;overflow-x:auto;
+    padding:8px 12px;gap:6px;flex-wrap:nowrap;flex-shrink:0
+  }
+  .en-section{display:flex;flex-direction:row;gap:4px;align-items:center;flex-shrink:0;padding:0}
+  .en-label{display:none}
+  .en-item{flex-shrink:0;font-size:12.5px;padding:6px 10px;white-space:nowrap}
+  .en-divider{width:1px;height:24px;background:var(--border-lt);margin:0 2px;flex-shrink:0}
+  #request-panel{border-right:none;border-bottom:1.5px solid var(--border-lt)}
+  #response-panel{width:100%;border-left:none}
+  .resp-tabs{padding:0 4px}
+  #statusbar{flex-wrap:wrap;height:auto;padding:8px 14px;gap:8px}
+}
+@media(max-width:480px){
+  .req-bar{flex-wrap:wrap}
+  .path-input{flex:1;min-width:160px}
+  .send-btn{width:100%;justify-content:center}
+  .scope-bar{flex-wrap:wrap;gap:8px}
+  .scope-label{width:100%}
+  .scope-input{width:100%}
+  .scope-verdict{margin-left:0}
+}
+
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="logo">
+      <div class="logo-mark">
+        <div class="logo-circle"><span>AJ</span></div>
+        <svg class="logo-arc" viewBox="0 0 36 36" fill="none"><path d="M5 18 C5 10.8 10.8 5 18 5 C21.4 5 24.5 6.4 26.8 8.6" stroke="#1A9E90" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-fhir">FHIR</span>
+        <span class="logo-sub">Sandbox</span>
+      </div>
+    </a>
+        <div class="nav-links">
+      <a href="index.html" class="nl">Home</a>
+      <a href="scenarios.html" class="nl">Scenarios</a>
+      <a href="console.html" class="nl active">API Console</a>
+      <a href="walkthrough.html" class="nl">Walkthrough</a>
+      <a href="launcher.html" class="nl">SMART Launcher</a>
+    </div>
+    <div class="nav-right">
+      <span class="env-pill"><span class="env-dot"></span>sandbox</span>
+      <a href="https://ajfhir.org" target="_blank" class="back-btn">ajfhir.org ↗</a>
+    </div>
+  </div>
+</nav>
+
+<div id="shell">
+<div id="body">
+
+  <!-- Endpoint browser -->
+  <div id="endpoint-nav">
+    <div class="en-section">
+      <div class="en-label">Patient</div>
+      <div class="en-item active" onclick="loadEndpoint('GET','/fhir/Patient/ePatient-8675309','','patient/Patient.rs')"><span class="method-tag get-tag">GET</span>Patient by ID</div>
+      <div class="en-item" onclick="loadEndpoint('GET','/fhir/Patient?name=Kumar','','patient/Patient.rs')"><span class="method-tag get-tag">GET</span>Search patients</div>
+    </div>
+    <div class="en-divider"></div>
+    <div class="en-section">
+      <div class="en-label">Observation</div>
+      <div class="en-item" onclick="loadEndpoint('GET','/fhir/Observation?patient=ePatient-8675309','','patient/Observation.rs')"><span class="method-tag get-tag">GET</span>By patient</div>
+      <div class="en-item" onclick="loadEndpoint('POST','/fhir/Observation',OBS_BODY,'patient/Observation.c')"><span class="method-tag post-tag">POST</span>Create result</div>
+    </div>
+    <div class="en-divider"></div>
+    <div class="en-section">
+      <div class="en-label">DiagnosticReport</div>
+      <div class="en-item" onclick="loadEndpoint('GET','/fhir/DiagnosticReport?patient=ePatient-8675309','','patient/DiagnosticReport.rs')"><span class="method-tag get-tag">GET</span>By patient</div>
+    </div>
+    <div class="en-divider"></div>
+    <div class="en-section">
+      <div class="en-label">Consent</div>
+      <div class="en-item" onclick="loadEndpoint('GET','/fhir/Consent?patient=ePatient-8675309','','patient/Consent.rs')"><span class="method-tag get-tag">GET</span>Patient consent</div>
+      <div class="en-item" onclick="loadEndpoint('PUT','/fhir/Consent/consent-P8675309',CONSENT_BODY,'patient/Consent.u')"><span class="method-tag patch-tag">PUT</span>Update consent</div>
+    </div>
+    <div class="en-divider"></div>
+    <div class="en-section">
+      <div class="en-label">Task (Referral)</div>
+      <div class="en-item" onclick="loadEndpoint('GET','/fhir/Task?patient=ePatient-8675309','','patient/Task.rs')"><span class="method-tag get-tag">GET</span>Patient tasks</div>
+      <div class="en-item" onclick="loadEndpoint('POST','/fhir/Task',TASK_BODY,'patient/Task.c')"><span class="method-tag post-tag">POST</span>Create task</div>
+    </div>
+    <div class="en-divider"></div>
+    <div class="en-section">
+      <div class="en-label">ServiceRequest</div>
+      <div class="en-item" onclick="loadEndpoint('POST','/fhir/ServiceRequest',SR_BODY,'patient/ServiceRequest.c')"><span class="method-tag post-tag">POST</span>Create order</div>
+    </div>
+    <div class="en-divider"></div>
+    <div class="en-section">
+      <div class="en-label">AuditEvent</div>
+      <div class="en-item" onclick="loadEndpoint('GET','/fhir/AuditEvent?agent=dr-smith','','user/AuditEvent.rs')"><span class="method-tag get-tag">GET</span>My audit events</div>
+    </div>
+    <div class="en-divider"></div>
+    <div class="en-section">
+      <div class="en-label">Discovery</div>
+      <div class="en-item" onclick="loadEndpoint('GET','/.well-known/smart-configuration','','')"><span class="method-tag get-tag">GET</span>SMART config</div>
+      <div class="en-item" onclick="loadEndpoint('GET','/fhir/metadata','','')"><span class="method-tag get-tag">GET</span>CapabilityStatement</div>
+    </div>
+  </div>
+
+  <!-- Request builder -->
+  <div id="request-panel">
+    <div class="panel-hd">
+      <span class="panel-hd-title">Request</span>
+    </div>
+
+    <!-- Method + path + send -->
+    <div class="req-bar">
+      <select class="method-sel" id="method-sel" onchange="checkScope()">
+        <option>GET</option><option>POST</option><option>PUT</option>
+        <option>PATCH</option><option>DELETE</option>
+      </select>
+      <input class="path-input" id="path-input" type="text"
+             value="/fhir/Patient/ePatient-8675309"
+             oninput="checkScope()" placeholder="/fhir/ResourceType/id"/>
+      <button class="send-btn" id="send-btn" onclick="sendRequest()">
+        ▶ Send
+      </button>
+    </div>
+
+    <!-- Scope check -->
+    <div class="scope-bar">
+      <span class="scope-label">Scope</span>
+      <input class="scope-input" id="scope-input" type="text"
+             value="patient/Patient.rs patient/Observation.rs patient/DiagnosticReport.rs"
+             oninput="checkScope()" placeholder="patient/ResourceType.ops"/>
+      <span class="scope-verdict sv-pass" id="scope-verdict">✓ Scope permits</span>
+    </div>
+
+    <!-- Body editor -->
+    <div class="body-area">
+      <div class="body-label" id="body-label" style="display:none">Request body</div>
+      <textarea class="body-editor" id="body-editor" style="display:none" rows="10"></textarea>
+
+      <div id="req-hint" style="margin-top:8px;">
+        <div style="font-size:13px;color:var(--muted);line-height:1.7">
+          <strong style="color:var(--dark);font-weight:600;font-size:15px">How to use the console</strong><br/><br/>
+          1. Pick an endpoint from the left, or type any FHIR path above.<br/>
+          2. The scope checker fires instantly — it shows whether your scope string would permit the call before you send.<br/>
+          3. Edit the scope string to try what happens when you remove a permission.<br/>
+          4. Click Send to fire the (faked) request and see the response.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Response panel -->
+  <div id="response-panel">
+    <div class="panel-hd">
+      <span class="panel-hd-title">Response</span>
+    </div>
+    <div class="resp-status-bar" id="resp-status-bar" style="display:none">
+      <span class="resp-stat" id="resp-stat">200 OK</span>
+      <span class="rs-lat" id="resp-lat">-</span>
+    </div>
+    <div class="resp-tabs">
+      <div class="rtab active" onclick="setRespTab('body',this)">Body</div>
+      <div class="rtab" onclick="setRespTab('headers',this)">Headers</div>
+      <div class="rtab" onclick="setRespTab('jwt',this)">JWT</div>
+    </div>
+    <div class="resp-body" id="resp-body">
+      <div style="padding:32px 0;text-align:center;color:var(--dim);">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:14px;opacity:.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <div style="font-size:15px;font-weight:500;color:var(--muted);margin-bottom:6px;">No response yet</div>
+        <div style="font-size:13px;color:var(--dim)">Select an endpoint and click Send →</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /body -->
+
+<div id="statusbar">
+  <span class="sb-item"><span class="sb-dot sb-g"></span>auth.sandbox.ajfhir.org</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item"><span class="sb-dot sb-g"></span>fhir.sandbox.ajfhir.org</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">Bearer: dr.smith · expires 47m</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item" style="margin-left:auto;color:var(--dim)">SMART App Launch v2.2 · FHIR R4</span>
+</div>
+</div><!-- /shell -->
+
+<script>
+'use strict';
+
+/* ── Pre-built request bodies ── */
+const OBS_BODY=`{
+  "resourceType": "Observation",
+  "status": "final",
+  "subject": { "reference": "Patient/ePatient-8675309" },
+  "code": { "coding": [{ "system": "http://loinc.org", "code": "718-7", "display": "Hemoglobin" }]},
+  "valueQuantity": { "value": 13.2, "unit": "g/dL" }
+}`;
+const CONSENT_BODY=`{
+  "resourceType": "Consent",
+  "id": "consent-P8675309",
+  "status": "active",
+  "provision": {
+    "type": "permit",
+    "class": [{ "code": "Observation" }, { "code": "Patient" }]
+  }
+}`;
+const TASK_BODY=`{
+  "resourceType": "Task",
+  "status": "requested",
+  "intent": "order",
+  "focus": { "reference": "ServiceRequest/sr-referral-001" },
+  "for": { "reference": "Patient/ePatient-8675309" },
+  "owner": { "reference": "Organization/central-hospital-cardiology" }
+}`;
+const SR_BODY=`{
+  "resourceType": "ServiceRequest",
+  "status": "active",
+  "intent": "order",
+  "subject": { "reference": "Patient/ePatient-8675309" },
+  "code": { "coding": [{ "system": "http://loinc.org", "code": "58410-2", "display": "CBC panel" }]}
+}`;
+
+/* ── Scope enforcement (exact port of SmartScopeInterceptor.java) ── */
+function normaliseOps(ops){if(ops==='read')return 'rs';if(ops==='write')return 'cud';return ops;}
+function requiredOpsFor(method){
+  switch(method.toUpperCase()){
+    case 'GET':return['r','s'];case 'POST':return['c'];
+    case 'PUT':return['u'];case 'PATCH':return['u'];case 'DELETE':return['d'];
+    default:return['r'];
+  }
+}
+function extractResource(path){
+  const clean=path.split('?')[0].replace(/\/+$/,'');
+  if(clean.includes('metadata')||clean.includes('smart-configuration'))return '__meta__';
+  const parts=clean.split('/').filter(Boolean);
+  for(const p of parts){
+    if(p.length>1&&p[0]===p[0].toUpperCase()&&p[0]!==p[0].toLowerCase())return p;
+  }
+  return null;
+}
+function scopePermits(scope,resource,op){
+  if(!scope.startsWith('patient/')&&!scope.startsWith('user/'))return false;
+  const parts=scope.split('/');if(parts.length!==2)return false;
+  const tp=parts[1].split('.');if(tp.length!==2)return false;
+  const sr=tp[0],so=normaliseOps(tp[1]);
+  return(sr==='*'||sr===resource)&&so.includes(op);
+}
+function checkScope(){
+  const method=document.getElementById('method-sel').value;
+  const path=document.getElementById('path-input').value;
+  const scopeStr=document.getElementById('scope-input').value;
+  const resource=extractResource(path);
+  const verdict=document.getElementById('scope-verdict');
+
+  if(!resource||resource==='__meta__'){
+    verdict.textContent='✓ Always permitted';
+    verdict.className='scope-verdict sv-pass';return;
+  }
+  const requiredOps=requiredOpsFor(method);
+  const scopes=scopeStr.trim().split(/\s+/);
+  const permitted=requiredOps.some(op=>scopes.some(s=>scopePermits(s,resource,op)));
+
+  if(permitted){
+    verdict.textContent='✓ Scope permits '+method+' /'+resource;
+    verdict.className='scope-verdict sv-pass';
+  } else {
+    verdict.textContent='✗ Scope blocks '+method+' /'+resource;
+    verdict.className='scope-verdict sv-block';
+  }
+
+  /* Show/hide body editor */
+  const needsBody=['POST','PUT','PATCH'].includes(method);
+  document.getElementById('body-label').style.display=needsBody?'':'none';
+  document.getElementById('body-editor').style.display=needsBody?'':'none';
+  document.getElementById('req-hint').style.display=needsBody?'none':'';
+}
+
+function loadEndpoint(method,path,body,scope){
+  document.getElementById('method-sel').value=method;
+  document.getElementById('path-input').value=path;
+  if(scope)document.getElementById('scope-input').value=scope;
+  if(body)document.getElementById('body-editor').value=body;
+  checkScope();
+  /* Mark active in sidebar */
+  document.querySelectorAll('.en-item').forEach(el=>el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+let respTab='body';
+function setRespTab(tab,el){
+  respTab=tab;
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderRespBody();
+}
+
+let lastResp=null;
+function renderRespBody(){
+  const rb=document.getElementById('resp-body');
+  if(!lastResp){rb.innerHTML='<div style="padding:32px 24px;text-align:center"><div style="font-size:15px;font-weight:500;color:var(--muted);margin-bottom:6px">No response yet</div><div style="font-size:13px;color:var(--dim)">Select an endpoint and click Send →</div></div>';return;}
+  if(respTab==='body')rb.innerHTML=lastResp.body;
+  else if(respTab==='headers')rb.innerHTML=lastResp.headers;
+  else if(respTab==='jwt')rb.innerHTML=lastResp.jwt;
+}
+
+function sendRequest(){
+  const method=document.getElementById('method-sel').value;
+  const path=document.getElementById('path-input').value;
+  const scopeStr=document.getElementById('scope-input').value;
+  const resource=extractResource(path);
+  const btn=document.getElementById('send-btn');
+  const lat=60+Math.floor(Math.random()*160);
+
+  btn.className='send-btn loading';
+  btn.textContent='⏳ Sending…';
+
+  /* Check scope */
+  let blocked=false;
+  if(resource&&resource!=='__meta__'){
+    const requiredOps=requiredOpsFor(method);
+    const scopes=scopeStr.trim().split(/\s+/);
+    blocked=!requiredOps.some(op=>scopes.some(s=>scopePermits(s,resource,op)));
+  }
+
+  setTimeout(()=>{
+    btn.className='send-btn';
+    btn.textContent='▶ Send';
+    const sb=document.getElementById('resp-status-bar');
+    sb.style.display='';
+    const statEl=document.getElementById('resp-stat');
+    const latEl=document.getElementById('resp-lat');
+    latEl.textContent=lat+'ms';
+
+    if(blocked){
+      statEl.textContent='403 Forbidden';
+      statEl.className='resp-stat rs403';
+      lastResp={
+        body:`<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"OperationOutcome"</span><span class="hm">,</span>
+<span class="hk">"issue"</span><span class="hm">: [{</span>
+  <span class="hk">"severity"</span><span class="hm">: </span><span class="hs">"error"</span><span class="hm">,</span>
+  <span class="hk">"code"</span><span class="hm">: </span><span class="hs">"forbidden"</span><span class="hm">,</span>
+  <span class="hk">"diagnostics"</span><span class="hm">: </span><span class="hs">"SmartScopeInterceptor: scope not granted for ${method} on ${resource}. Granted: ${scopeStr.slice(0,60)}"</span>
+<span class="hm">}]</span>`,
+        headers:`<span class="hm">HTTP/1.1 403 Forbidden\nContent-Type: application/fhir+json\nX-Powered-By: HAPI FHIR 7.2.0</span>`,
+        jwt:`<span class="hm">No token in response body for error responses.</span>`
+      };
+    } else {
+      const is201=method==='POST';
+      statEl.textContent=is201?'201 Created':'200 OK';
+      statEl.className='resp-stat '+(is201?'rs201':'rs200');
+      lastResp={
+        body:buildSuccessBody(method,path,resource),
+        headers:`<span class="hm">HTTP/1.1 ${is201?'201 Created':'200 OK'}\nContent-Type: application/fhir+json\nX-Request-Id: req-${Math.random().toString(36).slice(2,10)}\nX-Powered-By: HAPI FHIR 7.2.0\nSmartScope-Check: PASS\nConsent-Check: PASS</span>`,
+        jwt:`<span class="hm">Bearer token claims (decoded RS256 JWT):</span>
+
+<span class="hk">"sub"</span><span class="hm">: </span><span class="hs">"dr-smith"</span><span class="hm">,</span>
+<span class="hk">"iss"</span><span class="hm">: </span><span class="hs">"https://auth.sandbox.ajfhir.org"</span><span class="hm">,</span>
+<span class="hk">"patient"</span><span class="hm">: </span><span class="hs">"ePatient-8675309"</span><span class="hm">,</span>
+<span class="hk">"scope"</span><span class="hm">: </span><span class="hs">"${scopeStr.slice(0,80)}"</span><span class="hm">,</span>
+<span class="hk">"exp"</span><span class="hm">: </span><span class="hn">${Math.floor(Date.now()/1000)+3600}</span><span class="hm">,</span>
+<span class="hk">"kid"</span><span class="hm">: </span><span class="hs">"smart-2025-01"</span>`
+      };
+    }
+    renderRespBody();
+  },lat);
+}
+
+function buildSuccessBody(method,path,resource){
+  if(resource==='Patient')return`<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"Patient"</span><span class="hm">,</span>
+<span class="hk">"id"</span><span class="hm">: </span><span class="hs">"ePatient-8675309"</span><span class="hm">,</span>
+<span class="hk">"name"</span><span class="hm">: [{ </span><span class="hk">"family"</span><span class="hm">: </span><span class="hs">"Kumar"</span><span class="hm">, </span><span class="hk">"given"</span><span class="hm">: [</span><span class="hs">"Priya"</span><span class="hm">] }],</span>
+<span class="hk">"birthDate"</span><span class="hm">: </span><span class="hs">"1985-03-12"</span><span class="hm">,</span>
+<span class="hk">"gender"</span><span class="hm">: </span><span class="hs">"female"</span>`;
+  if(resource==='Observation')return`<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"Bundle"</span><span class="hm">,</span>
+<span class="hk">"total"</span><span class="hm">: </span><span class="hn">3</span><span class="hm">,</span>
+<span class="hk">"entry"</span><span class="hm">: [{ </span><span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"Observation"</span><span class="hm">, </span><span class="hk">"id"</span><span class="hm">: </span><span class="hs">"obs-hb-001"</span><span class="hm">,</span>
+  <span class="hk">"code"</span><span class="hm">: { </span><span class="hs">"718-7 Hemoglobin"</span><span class="hm"> }, </span><span class="hk">"valueQuantity"</span><span class="hm">: { </span><span class="hk">"value"</span><span class="hm">: </span><span class="hn">13.2</span><span class="hm">, </span><span class="hk">"unit"</span><span class="hm">: </span><span class="hs">"g/dL"</span><span class="hm"> }},</span>
+<span class="hm">… 2 more Observations ]</span>`;
+  if(resource==='Consent')return`<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"Bundle"</span><span class="hm">,</span>
+<span class="hk">"total"</span><span class="hm">: </span><span class="hn">1</span><span class="hm">,</span>
+<span class="hk">"entry"</span><span class="hm">: [{ </span><span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"Consent"</span><span class="hm">, </span><span class="hk">"provision"</span><span class="hm">: { </span><span class="hk">"type"</span><span class="hm">: </span><span class="hs">"permit"</span><span class="hm"> }}]</span>`;
+  if(resource==='__meta__'||path.includes('smart-configuration'))return`<span class="ht">"authorization_endpoint"</span><span class="hm">: </span><span class="hs">"https://auth.sandbox.ajfhir.org/oauth2/authorize"</span><span class="hm">,</span>
+<span class="hk">"token_endpoint"</span><span class="hm">: </span><span class="hs">"https://auth.sandbox.ajfhir.org/oauth2/token"</span><span class="hm">,</span>
+<span class="hk">"capabilities"</span><span class="hm">: [</span><span class="hs">"launch-ehr"</span><span class="hm">,</span><span class="hs">"client-public"</span><span class="hm">,</span><span class="hs">"sso-openid-connect"</span><span class="hm">,</span><span class="hs">"context-ehr-patient"</span><span class="hm">],</span>
+<span class="hk">"code_challenge_methods_supported"</span><span class="hm">: [</span><span class="hs">"S256"</span><span class="hm">]</span>`;
+  return`<span class="ht">"resourceType"</span><span class="hm">: </span><span class="hs">"${resource||'Bundle'}"</span><span class="hm">,</span>
+<span class="hk">"id"</span><span class="hm">: </span><span class="hs">"${(resource||'res').toLowerCase()}-001"</span><span class="hm">,</span>
+<span class="hk">"status"</span><span class="hm">: </span><span class="hs">"active"</span>`;
+}
+
+/* Init */
+checkScope();
+</script>
+</body>
+</html>

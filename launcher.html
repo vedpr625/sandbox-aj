@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SMART Launcher — AJ FHIR Sandbox</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --navy:#1B4F8A;--navy-d:#133A6A;--navy-lt:#EBF2FA;
+  --teal:#0D7A6E;--teal-d:#0A6058;--teal-lt:#E6F4F2;--teal-mid:#1A9E90;
+  --dark:#0D1F33;--text:#2C5070;--muted:#3D6A8A;--dim:#5A8AA8;
+  --border:#B8D4E8;--border-lt:#DDE8F4;--bg:#F4F7FB;--surface:#fff;--surface2:#F8FAFD;
+  --pass:#0A6058;--pass-lt:#E6F4F0;--pass-b:rgba(10,96,80,.2);
+  --warn:#854D0E;--warn-lt:#FEF9EC;--warn-b:rgba(133,77,14,.2);
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  --r:12px;--r-lg:16px;--r-xl:20px;
+  --shadow:0 1px 4px rgba(27,79,138,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 8px 30px rgba(27,79,138,.1),0 2px 6px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);font-size:16px;color:var(--dark);background:var(--bg);line-height:1.6}
+a{text-decoration:none;color:inherit}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:50;background:#F0F7FF;border-bottom:1px solid var(--border);}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 1.5rem;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-mark{position:relative;width:36px;height:36px;flex-shrink:0;}
+.logo-circle{width:36px;height:36px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;}
+.logo-circle span{color:white;font-size:11px;font-weight:800;letter-spacing:-.5px;}
+.logo-arc{position:absolute;top:0;left:0;width:36px;height:36px;}
+.logo-text{display:flex;align-items:baseline;gap:6px;}
+.logo-fhir{font-size:18px;font-weight:800;color:var(--dark);letter-spacing:-.5px;}
+.logo-sub{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;border-left:1px solid var(--border);padding-left:6px;}
+.nav-links{display:flex;align-items:center;gap:2px;}
+.nl{font-size:14px;font-weight:500;color:var(--muted);padding:8px 14px;border-radius:8px;transition:all .12s;text-decoration:none;}
+.nl:hover{background:#E0EFFE;color:var(--navy);}
+.nl.active{background:#E0EFFE;color:var(--navy);font-weight:600;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.env-pill{font-size:13px;font-weight:600;padding:6px 14px;border-radius:20px;background:var(--teal-lt);color:var(--teal-d);border:1px solid rgba(10,96,80,.2);display:flex;align-items:center;gap:5px;}
+.env-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+.back-btn{font-size:13px;font-weight:500;color:var(--muted);padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:white;transition:all .12s;text-decoration:none;}
+.back-btn:hover{border-color:var(--navy);color:var(--navy);}
+
+/* ── PAGE ── */
+.page-wrap{max-width:900px;margin:0 auto;padding:48px 1.5rem 80px;}
+
+/* ── PAGE HEADER ── */
+.page-eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal-d);margin-bottom:10px;}
+.page-title{font-size:clamp(1.75rem,3vw,2.5rem);font-weight:800;color:var(--dark);letter-spacing:-.03em;line-height:1.08;margin-bottom:10px;}
+.page-sub{font-size:16px;color:var(--muted);line-height:1.65;max-width:620px;margin-bottom:36px;}
+
+/* ── FORM CARD ── */
+.form-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px;}
+.form-section{padding:24px 28px;border-bottom:1.5px solid var(--border-lt);}
+.form-section:last-child{border-bottom:none;}
+.fs-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;}
+.fs-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* ── INPUTS ── */
+.field-label{font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px;}
+.field-hint{font-size:12px;color:var(--dim);margin-top:5px;}
+input.fi,select.fi{
+  width:100%;font-size:14px;font-family:var(--sans);
+  padding:11px 14px;border:1.5px solid var(--border);
+  border-radius:var(--r);background:var(--surface);
+  color:var(--dark);outline:none;transition:border-color .14s;
+}
+input.fi:focus,select.fi:focus{
+  border-color:var(--navy);
+  outline:3px solid rgba(27,79,138,.1);outline-offset:-1px;
+}
+input.fi::placeholder{color:var(--dim);}
+
+/* ── SCOPE BUILDER ── */
+.scope-string-wrap{
+  padding:10px 14px;background:var(--surface2);
+  border:1.5px solid var(--border-lt);border-radius:var(--r);
+  margin-bottom:12px;
+}
+.scope-string-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;}
+.scope-string-value{font-family:var(--mono);font-size:13px;color:var(--dark);word-break:break-all;line-height:1.6;}
+.scope-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.scope-item{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 12px;background:var(--surface);
+  border:1.5px solid var(--border);border-radius:var(--r);
+  font-size:13px;cursor:pointer;transition:all .12s;
+  user-select:none;
+}
+.scope-item:hover{border-color:var(--navy);background:var(--navy-lt);}
+.scope-item.checked{border-color:rgba(27,79,138,.3);background:var(--navy-lt);color:var(--navy);}
+.scope-item input[type=checkbox]{
+  accent-color:var(--navy);width:15px;height:15px;flex-shrink:0;cursor:pointer;
+}
+.scope-item span{font-family:var(--mono);font-size:12.5px;}
+
+/* ── LAUNCH BUTTON ── */
+.launch-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  width:100%;padding:14px 24px;
+  background:var(--navy);color:white;
+  border:none;border-radius:var(--r);
+  font-size:15px;font-weight:600;cursor:pointer;
+  font-family:var(--sans);transition:all .14s;
+  margin-top:4px;
+}
+.launch-btn:hover{background:var(--navy-d);transform:translateY(-1px);box-shadow:0 4px 16px rgba(27,79,138,.25);}
+.launch-btn:active{transform:none;}
+.launch-btn svg{width:18px;height:18px;stroke-width:2;fill:none;stroke:white;stroke-linecap:round;}
+
+/* ── LAUNCH RESULT ── */
+.launch-result{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--r-xl);box-shadow:var(--shadow-md);
+  overflow:hidden;margin-top:0;
+  animation:slideIn .2s ease;
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.lr-head{
+  padding:16px 24px;background:var(--pass-lt);
+  border-bottom:1.5px solid var(--pass-b);
+  display:flex;align-items:center;gap:10px;
+}
+.lr-head-icon{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--pass);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:15px;color:white;
+}
+.lr-head-title{font-size:15px;font-weight:700;color:var(--pass);}
+.lr-head-sub{font-size:13px;color:var(--pass);opacity:.8;margin-top:2px;}
+.lr-body{padding:24px;}
+.lr-field-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:7px;}
+.lr-value{
+  font-family:var(--mono);font-size:13px;padding:12px 14px;
+  background:var(--surface2);border:1.5px solid var(--border-lt);
+  border-radius:var(--r);word-break:break-all;line-height:1.7;
+  color:var(--dark);margin-bottom:16px;
+}
+.lr-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.lr-note{
+  padding:14px 16px;background:var(--navy-lt);
+  border-radius:var(--r);border:1.5px solid rgba(27,79,138,.12);
+  font-size:13px;color:var(--text);line-height:1.65;
+}
+.lr-note code{font-family:var(--mono);font-size:12px;background:rgba(27,79,138,.08);padding:1px 6px;border-radius:4px;}
+.copy-url-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:500;color:var(--navy);
+  padding:5px 12px;border:1px solid var(--border);
+  border-radius:8px;background:white;cursor:pointer;
+  float:right;margin-top:-4px;transition:all .12s;
+}
+.copy-url-btn:hover{border-color:var(--navy);}
+
+/* ── WHAT IT DOES ── */
+.features-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:32px;}
+.feat-card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--r-xl);padding:22px;
+  box-shadow:var(--shadow);
+}
+.feat-icon{
+  width:40px;height:40px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:14px;flex-shrink:0;
+}
+.feat-icon svg{width:20px;height:20px;stroke-width:1.8;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+.fi-navy{background:var(--navy-lt);color:var(--navy);}
+.fi-teal{background:var(--teal-lt);color:var(--teal-d);}
+.feat-title{font-size:15px;font-weight:700;color:var(--dark);margin-bottom:6px;}
+.feat-desc{font-size:13.5px;color:var(--muted);line-height:1.65;}
+
+/* ─── Responsive: nav ─── */
+@media(max-width:768px){
+  .nav-links{display:none}
+  .back-btn{display:none}
+  .env-pill{font-size:11px;padding:4px 10px}
+  .logo-fhir{font-size:15px}
+  .logo-sub{display:none}
+}
+
+
+/* ─── Responsive: launcher ─── */
+@media(max-width:900px){
+  .page-wrap{padding:36px 1.25rem 60px}
+  .features-grid{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  .page-wrap{padding:28px 1rem 48px}
+  .page-title{font-size:clamp(1.5rem,6vw,2rem)}
+  .fs-row{grid-template-columns:1fr}
+  .scope-grid{grid-template-columns:1fr 1fr}
+  .lr-grid{grid-template-columns:1fr}
+  .features-grid{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .scope-grid{grid-template-columns:1fr}
+  .page-title{font-size:1.4rem}
+}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="logo">
+      <div class="logo-mark">
+        <div class="logo-circle"><span>AJ</span></div>
+        <svg class="logo-arc" viewBox="0 0 36 36" fill="none"><path d="M5 18 C5 10.8 10.8 5 18 5 C21.4 5 24.5 6.4 26.8 8.6" stroke="#1A9E90" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-fhir">FHIR</span>
+        <span class="logo-sub">Sandbox</span>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nl">Home</a>
+      <a href="scenarios.html" class="nl">Scenarios</a>
+      <a href="console.html" class="nl">API Console</a>
+      <a href="walkthrough.html" class="nl">Walkthrough</a>
+      <a href="launcher.html" class="nl active">SMART Launcher</a>
+    </div>
+    <div class="nav-right">
+      <span class="env-pill"><span class="env-dot"></span>sandbox</span>
+      <a href="https://ajfhir.org" target="_blank" class="back-btn">ajfhir.org ↗</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-wrap">
+
+  <div class="page-eyebrow">SMART App Launch v2.2</div>
+  <h1 class="page-title">Launch your app against the platform.</h1>
+  <p class="page-sub">Enter your app's launch URL, choose scopes and a patient. The sandbox acts as the EHR — constructing the real SMART EHR Launch URL your app receives, with <code style="font-family:var(--mono);font-size:14px;background:#EEF2F7;padding:1px 6px;border-radius:4px;">iss</code> and <code style="font-family:var(--mono);font-size:14px;background:#EEF2F7;padding:1px 6px;border-radius:4px;">launch</code> parameters.</p>
+
+  <!-- FORM -->
+  <div class="form-card" id="launcher-form">
+
+    <!-- App URL + Client -->
+    <div class="form-section">
+      <div class="fs-label">Your application</div>
+      <div class="fs-row" style="margin-bottom:14px;">
+        <div>
+          <div class="field-label">App Launch URL <span style="color:var(--muted);font-weight:400">(required)</span></div>
+          <input class="fi" id="app-url" type="url" placeholder="https://your-app.com/launch"/>
+          <div class="field-hint">The URL where your SMART app receives the EHR launch</div>
+        </div>
+        <div>
+          <div class="field-label">Client ID</div>
+          <input class="fi" id="client-id" value="akhester-smart-client"/>
+          <div class="field-hint">Registered client in the sandbox Auth Server</div>
+        </div>
+      </div>
+      <div class="fs-row">
+        <div>
+          <div class="field-label">Launch type</div>
+          <select class="fi" id="launch-type">
+            <option value="ehr">EHR Launch — iss + launch token</option>
+            <option value="standalone">Standalone Launch — iss only</option>
+          </select>
+        </div>
+        <div>
+          <div class="field-label">Patient context</div>
+          <select class="fi" id="patient-sel">
+            <option value="ePatient-8675309">P. Kumar — ePatient-8675309</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scope builder -->
+    <div class="form-section">
+      <div class="fs-label">Requested scopes</div>
+      <div class="scope-string-wrap">
+        <div class="scope-string-label">Resolved scope string</div>
+        <div class="scope-string-value" id="scope-preview">launch openid fhirUser patient/Patient.rs patient/Observation.rs</div>
+      </div>
+      <div class="scope-grid">
+        <label class="scope-item checked"><input type="checkbox" checked onchange="updateScopes()"><span>launch</span></label>
+        <label class="scope-item checked"><input type="checkbox" checked onchange="updateScopes()"><span>openid</span></label>
+        <label class="scope-item checked"><input type="checkbox" checked onchange="updateScopes()"><span>fhirUser</span></label>
+        <label class="scope-item checked"><input type="checkbox" checked onchange="updateScopes()"><span>patient/Patient.rs</span></label>
+        <label class="scope-item checked"><input type="checkbox" checked onchange="updateScopes()"><span>patient/Observation.rs</span></label>
+        <label class="scope-item"><input type="checkbox" onchange="updateScopes()"><span>patient/Condition.rs</span></label>
+        <label class="scope-item"><input type="checkbox" onchange="updateScopes()"><span>patient/DiagnosticReport.rs</span></label>
+        <label class="scope-item"><input type="checkbox" onchange="updateScopes()"><span>patient/Consent.rs</span></label>
+        <label class="scope-item"><input type="checkbox" onchange="updateScopes()"><span>patient/Task.crs</span></label>
+      </div>
+    </div>
+
+    <!-- Launch button -->
+    <div class="form-section">
+      <button class="launch-btn" onclick="launchApp()">
+        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Launch app
+      </button>
+    </div>
+  </div>
+
+  <!-- Launch result injected here by JS -->
+  <div id="launch-result-wrap"></div>
+
+  <!-- What this does -->
+  <div style="margin-top:48px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal-d);margin-bottom:10px;">What this does</div>
+    <h2 style="font-size:22px;font-weight:800;color:var(--dark);letter-spacing:-.025em;margin-bottom:24px;">The full SMART EHR launch flow</h2>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon fi-navy">
+          <svg viewBox="0 0 24 24"><rect x="3" y="9" width="14" height="9" rx="2.5"/><path d="M6 9V7a4 4 0 018 0v2"/></svg>
+        </div>
+        <div class="feat-title">Real PKCE + OAuth 2.0 flow</div>
+        <div class="feat-desc">The launch URL carries a real <code style="font-family:var(--mono);font-size:12px;background:#EEF2F7;padding:1px 5px;border-radius:3px;">launch</code> opaque token and <code style="font-family:var(--mono);font-size:12px;background:#EEF2F7;padding:1px 5px;border-radius:3px;">iss</code> parameter. Your app exchanges these at <code style="font-family:var(--mono);font-size:12px;background:#EEF2F7;padding:1px 5px;border-radius:3px;">auth.sandbox.ajfhir.org</code> using PKCE S256.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-teal">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="feat-title">Scope enforcement on every request</div>
+        <div class="feat-desc">The RS256 JWT your app receives has a <code style="font-family:var(--mono);font-size:12px;background:#EEF2F7;padding:1px 5px;border-radius:3px;">scope</code> claim. SmartScopeInterceptor validates it against every FHIR request — try removing a scope to see a 403.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-navy">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="feat-title">Patient context binding</div>
+        <div class="feat-desc">The access token contains <code style="font-family:var(--mono);font-size:12px;background:#EEF2F7;padding:1px 5px;border-radius:3px;">patient</code> as a SMART v2.2 top-level claim. P. Kumar's Observations, Consent, and referral Task are all pre-seeded and queryable.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-teal">
+          <svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <div class="feat-title">ATNA audit event written</div>
+        <div class="feat-desc">Every launch writes a FHIR AuditEvent to the sandbox. Open the Scenarios page audit trail to see your launch event alongside the clinical session events.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+function updateScopes(){
+  const checks = document.querySelectorAll('.scope-item input[type=checkbox]');
+  const scopes = [...checks]
+    .filter(c => c.checked)
+    .map(c => c.closest('.scope-item').querySelector('span').textContent.trim());
+  
+  document.getElementById('scope-preview').textContent = scopes.join(' ') || '(no scopes selected)';
+  
+  // Update visual state of each item
+  checks.forEach(c => {
+    c.closest('.scope-item').classList.toggle('checked', c.checked);
+  });
+}
+
+function launchApp(){
+  const url       = document.getElementById('app-url').value.trim();
+  const clientId  = document.getElementById('client-id').value.trim();
+  const launchType = document.getElementById('launch-type').value;
+  const patient   = document.getElementById('patient-sel').value;
+  const patientLabel = document.getElementById('patient-sel').options[document.getElementById('patient-sel').selectedIndex].text;
+  const scopeStr  = document.getElementById('scope-preview').textContent;
+
+  if(!url){
+    const inp = document.getElementById('app-url');
+    inp.style.borderColor = '#B91C1C';
+    inp.focus();
+    inp.placeholder = 'Enter your app launch URL first';
+    setTimeout(()=>{ inp.style.borderColor = ''; inp.placeholder = 'https://your-app.com/launch'; }, 2500);
+    return;
+  }
+
+  const issBase    = 'https://fhir.sandbox.ajfhir.org';
+  const authBase   = 'https://auth.sandbox.ajfhir.org';
+  const launchToken = 'lnch-' + Math.random().toString(36).slice(2,10) + '-' + Date.now().toString(36);
+
+  let launchUrl;
+  if(launchType === 'ehr'){
+    launchUrl = url + (url.includes('?') ? '&' : '?')
+      + 'iss='    + encodeURIComponent(issBase)
+      + '&launch=' + encodeURIComponent(launchToken);
+  } else {
+    launchUrl = url + (url.includes('?') ? '&' : '?')
+      + 'iss='    + encodeURIComponent(issBase);
+  }
+
+  showLaunchResult(launchUrl, launchToken, clientId, scopeStr, patient, patientLabel, issBase, authBase, launchType);
+}
+
+function showLaunchResult(launchUrl, token, clientId, scopes, patientId, patientLabel, iss, auth, launchType){
+  const wrap = document.getElementById('launch-result-wrap');
+  wrap.innerHTML = `
+  <div class="launch-result">
+    <div class="lr-head">
+      <div class="lr-head-icon">✓</div>
+      <div>
+        <div class="lr-head-title">EHR launch URL constructed</div>
+        <div class="lr-head-sub">${launchType === 'ehr' ? 'EHR Launch — iss + launch token' : 'Standalone Launch — iss only'} · SMART App Launch v2.2</div>
+      </div>
+    </div>
+    <div class="lr-body">
+
+      <div class="lr-field-label">
+        Launch URL — send browser here
+        <button class="copy-url-btn" onclick="copyLaunchUrl(this, '${escHtml(launchUrl)}')">
+          Copy URL
+        </button>
+      </div>
+      <div class="lr-value" style="font-size:12.5px;">${escHtml(launchUrl)}</div>
+
+      <div class="lr-grid">
+        ${launchType === 'ehr' ? `
+        <div>
+          <div class="lr-field-label">Launch token <span style="font-size:10px;font-weight:400;color:var(--dim)">(one-time · 5 min TTL)</span></div>
+          <div class="lr-value">${escHtml(token)}</div>
+        </div>` : ''}
+        <div>
+          <div class="lr-field-label">Patient context</div>
+          <div class="lr-value">${escHtml(patientLabel)}</div>
+        </div>
+        <div>
+          <div class="lr-field-label">Scopes requested</div>
+          <div class="lr-value" style="font-size:12px;">${escHtml(scopes)}</div>
+        </div>
+      </div>
+
+      <div class="lr-note">
+        <strong>Next steps for your app:</strong><br/>
+        1. Receive this URL at your launch endpoint — extract <code>iss</code>${launchType === 'ehr' ? ' and <code>launch</code>' : ''}<br/>
+        2. Fetch SMART config from <code>${escHtml(iss)}/.well-known/smart-configuration</code><br/>
+        3. Redirect user to <code>${escHtml(auth)}/oauth2/authorize</code> with PKCE S256<br/>
+        4. Exchange auth code for RS256 Bearer token at <code>${escHtml(auth)}/oauth2/token</code><br/>
+        5. Use Bearer token on all FHIR requests to <code>${escHtml(iss)}/fhir</code>
+      </div>
+    </div>
+  </div>`;
+
+  wrap.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function copyLaunchUrl(btn, url){
+  navigator.clipboard.writeText(url).then(()=>{
+    btn.textContent = 'Copied!';
+    setTimeout(()=>btn.textContent = 'Copy URL', 1800);
+  });
+}
+</script>
+</body>
+</html>
